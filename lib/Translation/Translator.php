@@ -27,12 +27,13 @@ use Symfony\Contracts\Translation\TranslatorInterface;
 class Translator implements LegacyTranslatorInterface, TranslatorInterface, TranslatorBagInterface
 {
     /**
-     * @var TranslatorInterface|TranslatorBagInterface
+     * @var LegacyTranslatorInterface|TranslatorBagInterface
      */
     protected $translator;
 
     /**
      * @deprecated
+     *
      * @var bool
      */
     protected $caseInsensitive = false;
@@ -76,9 +77,8 @@ class Translator implements LegacyTranslatorInterface, TranslatorInterface, Tran
             throw new InvalidArgumentException(sprintf('The Translator "%s" must implement TranslatorInterface and TranslatorBagInterface.', get_class($translator)));
         }
 
-        if($caseInsensitive === true) {
+        if ($caseInsensitive === true) {
             @trigger_error('Case-insensitive support is deprecated and will be removed in Pimcore 10', \E_USER_DEPRECATED);
-
         }
 
         $this->translator = $translator;
@@ -122,7 +122,11 @@ class Translator implements LegacyTranslatorInterface, TranslatorInterface, Tran
             $id = mb_strtolower($id);
         }
 
-        $term = $this->translator->trans($id, $parameters, $domain, $locale);
+        if (isset($parameters['%count%']) && strpos($id, '|') !== false) {
+            $term = $this->translator->transChoice($id, $parameters['%count%'], $parameters, $domain, $locale);
+        } else {
+            $term = $this->translator->trans($id, $parameters, $domain, $locale);
+        }
 
         // only check for empty translation on original ID - we don't want to create empty
         // translations for normalized IDs when case insensitive
@@ -241,10 +245,6 @@ class Translator implements LegacyTranslatorInterface, TranslatorInterface, Tran
                             $translationKey = mb_strtolower($translationKey);
                         }
 
-                        if (empty($translationTerm)) {
-                            $translationTerm = $translationKey;
-                        }
-
                         $data[$translationKey] = $translationTerm;
                     }
                 }
@@ -294,17 +294,20 @@ class Translator implements LegacyTranslatorInterface, TranslatorInterface, Tran
             $normalizedId = mb_strtolower($id);
         }
 
-        if (isset($parameters['%count%'])) {
+        //translate only plural form(seperated by pipe "|") with count param
+        if (isset($parameters['%count%']) && $translated && strpos($normalizedId, '|') !== false) {
             $normalizedId = $id = $translated;
+            // Symfony 3.4 compatibility: use transChoice() for pluralization
+            $translated = $this->translator->transChoice($normalizedId, $parameters['%count%'], $parameters, $domain, $locale);
         }
 
-        $lookForFallback = $normalizedId == $translated;
+        $lookForFallback = empty($translated);
         if ($normalizedId != $translated && $translated) {
             return $translated;
         } elseif ($normalizedId == $translated) {
             if ($this->getCatalogue($locale)->has($normalizedId, $domain)) {
                 $translated = $this->getCatalogue($locale)->get($normalizedId, $domain);
-                if ($translated != $normalizedId) {
+                if ($normalizedId != $translated && $translated) {
                     return $translated;
                 }
             } elseif ($backend = $this->getBackendForDomain($domain)) {
@@ -372,7 +375,7 @@ class Translator implements LegacyTranslatorInterface, TranslatorInterface, Tran
             }
         }
 
-        return $translated;
+        return !empty($translated) ? $translated : $id;
     }
 
     /**
@@ -465,6 +468,7 @@ class Translator implements LegacyTranslatorInterface, TranslatorInterface, Tran
 
     /**
      * @deprecated
+     *
      * @return bool
      */
     public function getCaseInsensitive(): bool

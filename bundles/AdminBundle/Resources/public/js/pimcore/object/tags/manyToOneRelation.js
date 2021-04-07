@@ -33,7 +33,7 @@ pimcore.object.tags.manyToOneRelation = Class.create(pimcore.object.tags.abstrac
                 return false;
             }
             return true;
-        });
+        }.bind(this));
     },
 
 
@@ -376,6 +376,7 @@ pimcore.object.tags.manyToOneRelation = Class.create(pimcore.object.tags.abstrac
         this.data.id = data.id;
         this.data.type = data.type;
         this.data.subtype = data.subtype;
+        this.data.path = data.fullpath;
         this.dataChanged = true;
         this.component.removeCls("strikeThrough");
         if (data.published === false) {

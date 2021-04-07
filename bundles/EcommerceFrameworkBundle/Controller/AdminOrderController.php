@@ -15,6 +15,7 @@
 namespace Pimcore\Bundle\EcommerceFrameworkBundle\Controller;
 
 use GuzzleHttp\ClientInterface;
+use Knp\Component\Pager\PaginatorInterface;
 use Pimcore\Bundle\AdminBundle\Controller\AdminController;
 use Pimcore\Bundle\AdminBundle\Security\CsrfProtectionHandler;
 use Pimcore\Bundle\AdminBundle\Security\User\TokenStorageUserResolver;
@@ -31,7 +32,7 @@ use Pimcore\Controller\TemplateControllerInterface;
 use Pimcore\Controller\Traits\TemplateControllerTrait;
 use Pimcore\Localization\IntlFormatter;
 use Pimcore\Localization\LocaleServiceInterface;
-use Pimcore\Model\DataObject\AbstractObject;
+use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition\Data\ManyToOneRelation;
 use Pimcore\Model\DataObject\Concrete;
 use Pimcore\Model\DataObject\Localizedfield;
@@ -43,7 +44,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
 use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
 use Symfony\Component\Routing\Annotation\Route;
-use Zend\Paginator\Paginator;
 
 /**
  * Class AdminOrderController
@@ -73,7 +73,7 @@ class AdminOrderController extends AdminController implements EventedControllerI
         }
 
         // enable inherited values
-        AbstractObject::setGetInheritedValues(true);
+        DataObject::setGetInheritedValues(true);
         Localizedfield::setGetFallbackValues(true);
 
         $this->orderManager = Factory::getInstance()->getOrderManager();
@@ -94,10 +94,11 @@ class AdminOrderController extends AdminController implements EventedControllerI
      *
      * @param Request $request
      * @param IntlFormatter $formatter
+     * @param PaginatorInterface $paginator
      *
      * @return array
      */
-    public function listAction(Request $request, IntlFormatter $formatter)
+    public function listAction(Request $request, IntlFormatter $formatter, PaginatorInterface $paginator)
     {
         // create new order list
         $list = $this->orderManager->createOrderList();
@@ -110,13 +111,13 @@ class AdminOrderController extends AdminController implements EventedControllerI
 
         // add select fields
         $list->addSelectField('order.OrderDate');
-        $list->addSelectField(['OrderNumber' => 'order.orderNumber']);
+        $list->addSelectField('order.orderNumber AS OrderNumber');
         if ($list->getListType() == $list::LIST_TYPE_ORDER) {
-            $list->addSelectField(['TotalPrice' => 'order.totalPrice']);
+            $list->addSelectField('order.totalPrice AS TotalPrice');
         } elseif ($list->getListType() == $list::LIST_TYPE_ORDER_ITEM) {
-            $list->addSelectField(['TotalPrice' => 'orderItem.totalPrice']);
+            $list->addSelectField('orderItem.totalPrice AS TotalPrice');
         }
-        $list->addSelectField(['Items' => 'count(orderItem.o_id)']);
+        $list->addSelectField('count(orderItem.o_id) AS Items');
 
         // Search
         if ($request->get('q')) {
@@ -167,20 +168,21 @@ class AdminOrderController extends AdminController implements EventedControllerI
 
             //apply filter on PricingRule(OrderItem)
             $list->joinPricingRule();
-            $list->getQuery()->where('pricingRule.ruleId = ?', $pricingRuleId);
 
             //apply filter on PriceModifications
             $list->joinPriceModifications();
-            $list->getQuery()->orWhere('OrderPriceModifications.pricingRuleId = ?', $pricingRuleId);
+            $list->getQueryBuilder()->andWhere('pricingRule.ruleId = :pricingRuleId OR OrderPriceModifications.pricingRuleId = :pricingRuleId')->setParameter(':pricingRuleId', $pricingRuleId);
         }
 
         // set default order
         $list->setOrder('order.orderDate desc');
 
-        // create paging
-        $paginator = new Paginator($list);
-        $paginator->setItemCountPerPage(10);
-        $paginator->setCurrentPageNumber($request->get('page', 1));
+        // Paginate the results of the query
+        $paginator = $paginator->paginate(
+            $list,
+            $request->get('page', 1),
+            10
+        );
 
         return [
             'paginator' => $paginator,
@@ -300,7 +302,7 @@ class AdminOrderController extends AdminController implements EventedControllerI
                         $orderList = $this->orderManager->createOrderList();
                         $orderList->joinCustomer($class::classId());
 
-                        $orderList->getQuery()->where('customer.o_id = ?', $customer->getId());
+                        $orderList->getQueryBuilder()->andWhere('customer.o_id = :customer_oid')->setParameter(':customer_oid', $customer->getId());
 
                         $arrCustomerAccount['orderCount'] = $orderList->count();
                     }

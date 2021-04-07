@@ -19,11 +19,13 @@ namespace Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model;
 use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
+use Pimcore\Normalizer\NormalizerInterface;
 
-class CalculatedValue extends Data implements QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface
+class CalculatedValue extends Data implements QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface, VarExporterInterface, NormalizerInterface
 {
     use Extension\QueryColumnType;
     use DataObject\ClassDefinition\NullablePhpdocReturnTypeTrait;
+    use DataObject\Traits\SimpleNormalizerTrait;
 
     /**
      * Static type of this element
@@ -232,6 +234,8 @@ class CalculatedValue extends Data implements QueryResourcePersistenceAwareInter
 
     /**
      * fills object field data values from CSV Import String
+     *
+     * @deprecated
      *
      * @param string $importValue
      * @param null|DataObject\Concrete $object

@@ -21,8 +21,9 @@ use Pimcore\Db;
 use Pimcore\Model;
 use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
+use Pimcore\Normalizer\NormalizerInterface;
 
-class Date extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface
+class Date extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface, VarExporterInterface, NormalizerInterface
 {
     use DataObject\Traits\DefaultValueTrait;
     use DataObject\ClassDefinition\NullablePhpdocReturnTypeTrait;
@@ -284,6 +285,8 @@ class Date extends Data implements ResourcePersistenceAwareInterface, QueryResou
     }
 
     /**
+     * @deprecated
+     *
      * @param string $importValue
      * @param null|DataObject\Concrete $object
      * @param mixed $params
@@ -501,5 +504,29 @@ class Date extends Data implements ResourcePersistenceAwareInterface, QueryResou
         $newValue = $newValue instanceof \DateTimeInterface ? $newValue->format('Y-m-d') : null;
 
         return $oldValue === $newValue;
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function normalize($value, $params = [])
+    {
+        if ($value instanceof Carbon) {
+            return $value->getTimestamp();
+        }
+
+        return null;
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function denormalize($value, $params = [])
+    {
+        if ($value !== null) {
+            return $this->getDateFromTimestamp($value);
+        }
+
+        return null;
     }
 }

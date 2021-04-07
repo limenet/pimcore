@@ -126,6 +126,8 @@ abstract class Editable extends Model\AbstractModel implements Model\Document\Ed
     protected $inDialogBox = null;
 
     /**
+     * @deprecated Will be removed in Pimcore, use EditableLoader instead
+     *
      * @param string $type
      * @param string $name
      * @param int $documentId
@@ -472,6 +474,25 @@ abstract class Editable extends Model\AbstractModel implements Model\Document\Ed
     }
 
     /**
+     * @param string $name
+     * @param mixed $value
+     *
+     * @return self
+     */
+    public function addConfig(string $name, $value): self
+    {
+        if (!is_array($this->config)) {
+            $this->config = [];
+        }
+
+        $this->config[$name] = $value;
+
+        return $this;
+    }
+
+    /**
+     * @deprecated
+     *
      * @param string $name
      * @param mixed $value
      *
@@ -860,6 +881,29 @@ abstract class Editable extends Model\AbstractModel implements Model\Document\Ed
         }
 
         return $editableName;
+    }
+
+    /**
+     * This is a wrapper around \Pimcore\Document\Tag\NamingStrategy\NamingStrategyInterface::buildChildElementTagName()
+     * which will be exclusively used by Pimcore 10 to build the name of an editable. Use that if you want to support both v6.9 and v10
+     *
+     * @param string $name
+     * @param string $type
+     * @param array $parentBlockNames
+     * @param int $index
+     *
+     * @return string
+     *
+     * @throws \Exception
+     */
+    public static function buildChildEditableName(string $name, string $type, array $parentBlockNames, int $index): string
+    {
+        /**
+         * @var NamingStrategyInterface $namingStrategy
+         */
+        $namingStrategy = \Pimcore::getContainer()->get('pimcore.document.tag.naming.strategy');
+
+        return $namingStrategy->buildChildElementTagName($name, $type, $parentBlockNames, $index);
     }
 
     /**

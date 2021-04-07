@@ -29,7 +29,7 @@ use Pimcore\Model\DataObject\ClassDefinition\Data;
  *
  * How to generate a key: vendor/bin/generate-defuse-key
  */
-class EncryptedField extends Data implements ResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface
+class EncryptedField extends Data implements ResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface, VarExporterInterface
 {
     use Extension\ColumnType;
     use Model\DataObject\ClassDefinition\NullablePhpdocReturnTypeTrait;
@@ -404,7 +404,14 @@ class EncryptedField extends Data implements ResourcePersistenceAwareInterface, 
         }
     }
 
-    /** Encode value for packing it into a single column.
+    /**
+     * TODO switch to normalize as as soon as marshal gets kicked out. now it is to early because the delegate has
+     * to implement normalize as well
+     *
+     * @deprecated marshal is deprecated and will be removed in Pimcore 10. Use normalize instead.
+     *
+     * Encode value for packing it into a single column.
+     *
      * @param mixed $value
      * @param Model\DataObject\Concrete $object
      * @param mixed $params
@@ -419,11 +426,11 @@ class EncryptedField extends Data implements ResourcePersistenceAwareInterface, 
             $result = $fd->marshal($value, $object, $params);
             if ($result) {
                 $params['asString'] = true;
-                if ($params['raw']) {
+                if ($params['raw'] ?? false) {
                     $result = $this->encrypt($result, $object, $params);
                 } else {
-                    $result['value'] = $this->encrypt($result['value'], $object, $params);
-                    $result['value2'] = $this->encrypt($result['value2'], $object, $params);
+                    $result['value'] = $this->encrypt($result['value'] ?? null, $object, $params);
+                    $result['value2'] = $this->encrypt($result['value2'] ?? null, $object, $params);
                 }
             }
 
@@ -432,6 +439,11 @@ class EncryptedField extends Data implements ResourcePersistenceAwareInterface, 
     }
 
     /** See marshal
+     * TODO switch to denormalize as as soon as marshal gets kicked out. now it is to early because the delegate has
+     * to implement denormalize as well
+     *
+     * @deprecated unmarshal is deprecated and will be removed in Pimcore 10. Use denormalize instead.
+     *
      * @param mixed $value
      * @param Model\DataObject\Concrete $object
      * @param mixed $params
@@ -443,11 +455,11 @@ class EncryptedField extends Data implements ResourcePersistenceAwareInterface, 
         $fd = $this->getDelegateDatatypeDefinition();
         if ($fd && $value) {
             $params['asString'] = true;
-            if ($params['raw']) {
+            if ($params['raw'] ?? false) {
                 $value = $this->decrypt($value, $object, $params);
             } else {
-                $value['value'] = $this->decrypt($value['value'], $object, $params);
-                $value['value2'] = $this->decrypt($value['value2'], $object, $params);
+                $value['value'] = $this->decrypt($value['value'] ?? null, $object, $params);
+                $value['value2'] = $this->decrypt($value['value2'] ?? null, $object, $params);
             }
 
             $result = $fd->unmarshal($value, $object, $params);
@@ -485,6 +497,8 @@ class EncryptedField extends Data implements ResourcePersistenceAwareInterface, 
     }
 
     /**
+     * @deprecated
+     *
      * @param string $importValue
      * @param null|Model\DataObject\Concrete $object
      * @param mixed $params

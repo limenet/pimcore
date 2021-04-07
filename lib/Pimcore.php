@@ -25,11 +25,15 @@ class Pimcore
     public static $adminMode;
 
     /**
+     * @deprecated Will be removed in Pimcore 10
+     *
      * @var bool|null
      */
     protected static $debugMode;
 
     /**
+     * @deprecated Will be removed in Pimcore 10
+     *
      * @var bool|null
      */
     protected static $devMode;
@@ -65,6 +69,8 @@ class Pimcore
     /**
      * @internal
      *
+     * @deprecated Will be removed in Pimcore 10
+     *
      * @return bool|null
      */
     public static function getDebugMode(): ?bool
@@ -74,6 +80,8 @@ class Pimcore
 
     /**
      * @internal
+     *
+     * @deprecated Will be removed in Pimcore 10
      *
      * @param bool $debugMode
      */
@@ -93,6 +101,8 @@ class Pimcore
     /**
      * @internal
      *
+     * @deprecated Will be removed in Pimcore 10
+     *
      * @return bool|null
      */
     public static function getDevMode(): ?bool
@@ -102,6 +112,8 @@ class Pimcore
 
     /**
      * @internal
+     *
+     * @deprecated Will be removed in Pimcore 10
      *
      * @param bool $devMode
      */
@@ -152,7 +164,7 @@ class Pimcore
     public static function isInstalled()
     {
         try {
-            \Pimcore\Db::get();
+            \Pimcore\Db::get()->query('SELECT VERSION()');
 
             return true;
         } catch (\Exception $e) {

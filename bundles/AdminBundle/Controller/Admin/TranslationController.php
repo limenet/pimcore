@@ -14,6 +14,7 @@
 
 namespace Pimcore\Bundle\AdminBundle\Controller\Admin;
 
+use Doctrine\DBAL\Query\QueryBuilder as DoctrineQueryBuilder;
 use Pimcore\Bundle\AdminBundle\Controller\AdminController;
 use Pimcore\File;
 use Pimcore\Localization\LocaleServiceInterface;
@@ -275,7 +276,7 @@ class TranslationController extends AdminController
         $response = new Response("\xEF\xBB\xBF" . $csv);
         $response->headers->set('Content-Encoding', 'UTF-8');
         $response->headers->set('Content-Type', 'text/csv; charset=UTF-8');
-        $response->headers->set('Content-Disposition', 'attachment; filename="export_ ' . $suffix . '_translations.csv"');
+        $response->headers->set('Content-Disposition', 'attachment; filename="export_' . $suffix . '_translations.csv"');
         ini_set('display_errors', false); //to prevent warning messages in csv
 
         return $response;
@@ -504,8 +505,8 @@ class TranslationController extends AdminController
     protected function extendTranslationQuery($joins, $list, $tableName, $filters)
     {
         if ($joins) {
-            $list->onCreateQuery(
-                function (\Pimcore\Db\ZendCompatibility\QueryBuilder $select) use (
+            $list->onCreateQueryBuilder(
+                function (DoctrineQueryBuilder $select) use (
                     $joins,
                     $tableName,
                     $filters
@@ -522,15 +523,15 @@ class TranslationController extends AdminController
                         }
                         $alreadyJoined[$fieldname] = 1;
 
-                        $select->joinLeft(
-                            [$fieldname => $tableName],
+                        $select->addSelect('text AS ' . $fieldname);
+                        $select->leftJoin(
+                            $tableName,
+                            $fieldname,
+                            $fieldname,
                             '('
                             . $fieldname . '.key = ' . $tableName . '.key'
                             . ' and ' . $fieldname . '.language = ' . $db->quote($fieldname)
-                            . ')',
-                            [
-                                $fieldname => 'text',
-                            ]
+                            . ')'
                         );
                     }
 
@@ -707,13 +708,13 @@ class TranslationController extends AdminController
                     if ($el instanceof DataObject\AbstractObject) {
                         // inlcude variants
                         $list->setObjectTypes(
-                            [DataObject\AbstractObject::OBJECT_TYPE_VARIANT,
-                                DataObject\AbstractObject::OBJECT_TYPE_OBJECT,
-                                DataObject\AbstractObject::OBJECT_TYPE_FOLDER, ]
+                            [DataObject::OBJECT_TYPE_VARIANT,
+                                DataObject::OBJECT_TYPE_OBJECT,
+                                DataObject::OBJECT_TYPE_FOLDER, ]
                         );
                     }
                     $list->setCondition(
-                        ($el instanceof DataObject\AbstractObject ? 'o_' : '') . 'path LIKE ?',
+                        ($el instanceof DataObject ? 'o_' : '') . 'path LIKE ?',
                         [$list->escapeLike($el->getRealFullPath() . ($el->getRealFullPath() != '/' ? '/' : '')) . '%']
                     );
                     $childs = $list->load();

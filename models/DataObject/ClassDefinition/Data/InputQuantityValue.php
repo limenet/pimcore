@@ -43,7 +43,7 @@ class InputQuantityValue extends QuantityValue
      */
     public $queryColumnType = [
         'value' => 'varchar(255)',
-        'unit' => 'bigint(20)',
+        'unit' => 'varchar(50)',
     ];
 
     /**
@@ -53,7 +53,7 @@ class InputQuantityValue extends QuantityValue
      */
     public $columnType = [
         'value' => 'varchar(255)',
-        'unit' => 'bigint(20)',
+        'unit' => 'varchar(50)',
     ];
 
     public $phpdocType = '\\Pimcore\\Model\\DataObject\\Data\\InputQuantityValue';
@@ -90,7 +90,7 @@ class InputQuantityValue extends QuantityValue
     public function getDataFromEditmode($data, $object = null, $params = [])
     {
         if ($data['value'] || $data['unit']) {
-            if (is_numeric($data['unit'])) {
+            if ($data['unit']) {
                 if ($data['unit'] == -1 || $data['unit'] == null || empty($data['unit'])) {
                     return $this->getNewDataObject($data['value'], null);
                 }
@@ -118,17 +118,11 @@ class InputQuantityValue extends QuantityValue
             ($data === null || $data->getValue() === null || $data->getUnitId() === null)) {
             throw new Model\Element\ValidationException('Empty mandatory field [ ' . $this->getName() . ' ]');
         }
-
-        if (!empty($data)) {
-            if (!empty($data->getUnitId())) {
-                if (!is_numeric($data->getUnitId())) {
-                    throw new Model\Element\ValidationException('Unit id has to be empty or numeric ' . $data->getUnitId());
-                }
-            }
-        }
     }
 
     /**
+     * @deprecated
+     *
      * @param string $importValue
      * @param null|Model\DataObject\Concrete $object
      * @param array $params
@@ -187,6 +181,8 @@ class InputQuantityValue extends QuantityValue
     }
 
     /**
+     * @deprecated unmarshal is deprecated and will be removed in Pimcore 10. Use denormalize instead.
+     *
      * @param mixed $value
      * @param Model\DataObject\Concrete|null $object
      * @param array $params
@@ -219,5 +215,17 @@ class InputQuantityValue extends QuantityValue
     protected function getNewDataObject($value = null, $unitId = null)
     {
         return new InputQuantityValueDataObject($value, $unitId);
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function denormalize($value, $params = [])
+    {
+        if (is_array($value)) {
+            return new Model\DataObject\Data\InputQuantityValue($value['value'], $value['unitId']);
+        }
+
+        return null;
     }
 }

@@ -530,6 +530,8 @@ class AdvancedManyToManyRelation extends ManyToManyRelation
     }
 
     /**
+     * @deprecated
+     *
      * @param string $importValue
      * @param null|DataObject\Concrete $object
      * @param mixed $params
@@ -674,7 +676,7 @@ class AdvancedManyToManyRelation extends ManyToManyRelation
      */
     public function save($object, $params = [])
     {
-        if (!DataObject\AbstractObject::isDirtyDetectionDisabled() && $object instanceof Element\DirtyIndicatorInterface) {
+        if (!DataObject::isDirtyDetectionDisabled() && $object instanceof Element\DirtyIndicatorInterface) {
             if ($object instanceof DataObject\Localizedfield) {
                 if ($object->getObject() instanceof Element\DirtyIndicatorInterface) {
                     if (!$object->hasDirtyFields()) {
@@ -746,7 +748,7 @@ class AdvancedManyToManyRelation extends ManyToManyRelation
                     $sql .= ' AND ' . $db->quoteInto('ownername = ?', $context['fieldname']);
                 }
 
-                if (!DataObject\AbstractObject::isDirtyDetectionDisabled() && $object instanceof Element\DirtyIndicatorInterface) {
+                if (!DataObject::isDirtyDetectionDisabled() && $object instanceof Element\DirtyIndicatorInterface) {
                     if ($context['containerType']) {
                         $sql .= ' AND ' . $db->quoteInto('ownertype = ?', $context['containerType']);
                     }
@@ -849,7 +851,7 @@ class AdvancedManyToManyRelation extends ManyToManyRelation
                     $deleteCondition['ownername'] = $context['fieldname'];
                 }
 
-                if (!DataObject\AbstractObject::isDirtyDetectionDisabled() && $object instanceof Element\DirtyIndicatorInterface) {
+                if (!DataObject::isDirtyDetectionDisabled() && $object instanceof Element\DirtyIndicatorInterface) {
                     if (!empty($context['containerType'])) {
                         $deleteCondition['ownertype'] = $context['containerType'];
                     }
@@ -1018,6 +1020,9 @@ class AdvancedManyToManyRelation extends ManyToManyRelation
     }
 
     /** Encode value for packing it into a single column.
+     *
+     * @deprecated marshal is deprecated and will be removed in Pimcore 10. Use normalize instead.
+     *
      * @param mixed $value
      * @param DataObject\Concrete $object
      * @param mixed $params
@@ -1025,6 +1030,11 @@ class AdvancedManyToManyRelation extends ManyToManyRelation
      * @return mixed
      */
     public function marshal($value, $object = null, $params = [])
+    {
+        return $this->normalize($value, $params);
+    }
+
+    public function normalize($value, $params = [])
     {
         if (is_array($value)) {
             $result = [];
@@ -1051,17 +1061,11 @@ class AdvancedManyToManyRelation extends ManyToManyRelation
         return null;
     }
 
-    /** See marshal
-     * @param mixed $value
-     * @param DataObject\Concrete|null $object
-     * @param mixed $params
-     *
-     * @return mixed
-     */
-    public function unmarshal($value, $object = null, $params = [])
+    public function denormalize($value, $params = [])
     {
         if (is_array($value)) {
             $result = [];
+            $object = $params['object'] ?? null;
             foreach ($value as $elementMetadata) {
                 $elementData = $elementMetadata['element'];
 
@@ -1082,6 +1086,24 @@ class AdvancedManyToManyRelation extends ManyToManyRelation
 
             return $result;
         }
+    }
+
+    /** See marshal
+     *
+     * @deprecated marshal is deprecated and will be removed in Pimcore 10. Use normalize instead.
+     *
+     * @param mixed $value
+     * @param DataObject\Concrete|null $object
+     * @param mixed $params
+     *
+     * @return mixed
+     */
+    public function unmarshal($value, $object = null, $params = [])
+    {
+        $params = $params ?? [];
+        $params['object'] = $object;
+
+        return $this->denormalize($value, $params);
     }
 
     /**

@@ -2,7 +2,7 @@
 
 namespace Pimcore\Tests\Helper;
 
-use Pimcore\Model\DataObject\AbstractObject;
+use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition;
 use Pimcore\Model\DataObject\Fieldcollection\Definition;
 
@@ -13,7 +13,7 @@ class Model extends AbstractDefinitionHelper
      */
     public function _beforeSuite($settings = [])
     {
-        AbstractObject::setHideUnpublished(false);
+        DataObject::setHideUnpublished(false);
         parent::_beforeSuite($settings);
     }
 
@@ -471,7 +471,7 @@ class Model extends AbstractDefinitionHelper
             );
             $panel->addChild($this->createDataChild('fieldcollections', 'fieldcollection')
                 ->setAllowedTypes(['unittestfieldcollection']));
-            $panel->addChild($this->createDataChild('reverseManyToManyObjectRelation', 'nonowner'));
+            $panel->addChild($this->createDataChild('reverseObjectRelation', 'nonowner'));
             $panel->addChild($this->createDataChild('fieldcollections', 'myfieldcollection')
                 ->setAllowedTypes(['unittestfieldcollection']));
 
@@ -964,6 +964,13 @@ class Model extends AbstractDefinitionHelper
         return $cm->setupObjectbrick($name, $filename);
     }
 
+    public function setupUnitDefinitions()
+    {
+        DataObject\QuantityValue\Unit::create(['abbreviation' => 'mm'])->save();
+        DataObject\QuantityValue\Unit::create(['abbreviation' => 'cm'])->save();
+        DataObject\QuantityValue\Unit::create(['abbreviation' => 'm'])->save();
+    }
+
     /**
      * Initialize widely used class definitions
      */
@@ -971,6 +978,7 @@ class Model extends AbstractDefinitionHelper
     {
         $cm = $this->getClassManager();
 
+        $this->setupUnitDefinitions();
         $this->setupFieldcollection_Unittestfieldcollection();
 
         $this->setupPimcoreClass_Unittest();

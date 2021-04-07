@@ -63,7 +63,7 @@ class DataObjectHelperController extends AdminController
      */
     public function loadObjectDataAction(Request $request)
     {
-        $object = DataObject\AbstractObject::getById($request->get('id'));
+        $object = DataObject::getById($request->get('id'));
         $result = [];
         if ($object) {
             $result['success'] = true;
@@ -385,7 +385,7 @@ class DataObjectHelperController extends AdminController
         }
 
         if ($objectId) {
-            $object = DataObject\AbstractObject::getById($objectId);
+            $object = DataObject::getById($objectId);
             $context['object'] = $object;
         }
 
@@ -888,7 +888,7 @@ class DataObjectHelperController extends AdminController
     public function gridConfigApplyToAllAction(Request $request)
     {
         $objectId = $request->get('objectId');
-        $object = DataObject\AbstractObject::getById($objectId);
+        $object = DataObject::getById($objectId);
 
         if ($object->isAllowed('list')) {
             $classId = $request->get('classId');
@@ -918,7 +918,7 @@ class DataObjectHelperController extends AdminController
     public function gridMarkFavouriteColumnConfigAction(Request $request)
     {
         $objectId = $request->get('objectId');
-        $object = DataObject\AbstractObject::getById($objectId);
+        $object = DataObject::getById($objectId);
 
         if ($object->isAllowed('list')) {
             $classId = $request->get('classId');
@@ -1285,7 +1285,7 @@ class DataObjectHelperController extends AdminController
             }
 
             if ($objectId) {
-                $object = DataObject\AbstractObject::getById($objectId);
+                $object = DataObject::getById($objectId);
                 $context['object'] = $object;
             }
             DataObject\Service::enrichLayoutDefinition($field, null, $context);
@@ -1991,7 +1991,7 @@ class DataObjectHelperController extends AdminController
         $o = [];
         foreach ($object->getClass()->getFieldDefinitions() as $key => $value) {
             //exclude remote owner fields
-            if (!$value instanceof DataObject\ClassDefinition\Data\ReverseManyToManyObjectRelation) {
+            if (!$value instanceof DataObject\ClassDefinition\Data\ReverseObjectRelation) {
                 $o[$key] = $value->getForCsvExport($object);
             }
         }
@@ -2300,7 +2300,7 @@ class DataObjectHelperController extends AdminController
         foreach ($fds as $fd) {
             if ($fd instanceof DataObject\ClassDefinition\Data\Fieldcollections || $fd instanceof DataObject\ClassDefinition\Data\Objectbricks
                 || $fd instanceof DataObject\ClassDefinition\Data\Block) {
-                return;
+                continue;
             }
 
             if ($fd instanceof DataObject\ClassDefinition\Data\Localizedfields) {

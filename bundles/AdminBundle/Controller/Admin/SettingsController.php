@@ -37,6 +37,7 @@ use Pimcore\Tool;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesser;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -72,7 +73,7 @@ class SettingsController extends AdminController
             $customLogoFile = $customLogoPath . $format;
             if (file_exists($customLogoFile)) {
                 try {
-                    $mime = Tool\Mime::detect($customLogoFile);
+                    $mime = MimeTypeGuesser::getInstance()->guess($customLogoFile);
                     $logo = $customLogoFile;
                     break;
                 } catch (\Exception $e) {
@@ -1973,7 +1974,7 @@ class SettingsController extends AdminController
 
         if ($adapter instanceof \Pimcore\Web2Print\Processor\WkHtmlToPdf) {
             $params['adapterConfig'] = '-O landscape';
-        } elseif ($adapter instanceof \Pimcore\Web2Print\Processor\PdfReactor8) {
+        } elseif ($adapter instanceof \Pimcore\Web2Print\Processor\PdfReactor) {
             $params['adapterConfig'] = [
                 'javaScriptMode' => 0,
                 'addLinks' => true,

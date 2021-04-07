@@ -127,6 +127,7 @@ class PimcoreCoreExtension extends ConfigurableExtension implements PrependExten
         $loader->load('image_optimizers.yml');
         $loader->load('maintenance.yml');
         $loader->load('commands.yml');
+        $loader->load('marshaller.yml');
 
         $this->configureImplementationLoaders($container, $config);
         $this->configureModelFactory($container, $config);
@@ -359,7 +360,7 @@ class PimcoreCoreExtension extends ConfigurableExtension implements PrependExten
         $container->setParameter('pimcore.targeting.enabled', $config['enabled']);
         $container->setParameter('pimcore.targeting.conditions', $config['conditions']);
         if (!$container->hasParameter('pimcore.geoip.db_file')) {
-            $container->setParameter('pimcore.geoip.db_file', null);
+            $container->setParameter('pimcore.geoip.db_file', '');
         }
 
         $loader->load('targeting.yml');

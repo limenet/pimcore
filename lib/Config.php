@@ -1078,6 +1078,8 @@ class Config implements \ArrayAccess
     /**
      * @internal
      *
+     * @deprecated Will be removed in Pimcore 10
+     *
      * @param string $environment
      */
     public static function setEnvironment($environment)
@@ -1087,6 +1089,8 @@ class Config implements \ArrayAccess
 
     /**
      * @internal
+     *
+     * @deprecated Will be removed in Pimcore 10
      *
      * @return EnvironmentConfigInterface
      */
@@ -1102,6 +1106,8 @@ class Config implements \ArrayAccess
     /**
      * @internal
      *
+     * @deprecated Will be removed in Pimcore 10
+     *
      * @param EnvironmentConfigInterface $environmentConfig
      */
     public static function setEnvironmentConfig(EnvironmentConfigInterface $environmentConfig)
@@ -1111,6 +1117,8 @@ class Config implements \ArrayAccess
 
     /**
      * @return mixed
+     *
+     * @deprecated since v6.9 and will be removed in Pimcore 10.
      */
     public static function getFlag($key)
     {
@@ -1161,6 +1169,8 @@ class Config implements \ArrayAccess
     /**
      * @internal
      *
+     * @deprecated Will be removed in Pimcore 10
+     *
      * @param string $varName
      * @param mixed $default
      *
@@ -1176,6 +1186,8 @@ class Config implements \ArrayAccess
 
     /**
      * @internal
+     *
+     * @deprecated Will be removed in Pimcore 10
      */
     public static function initDebugDevMode()
     {

@@ -89,16 +89,18 @@
     "twig/extensions": "^1.5",
     "twig/twig": "^2.4",
     "umpirsky/country-list": "^2.0.4",
-    "vrana/adminer": "^4.6.3",
+    "vrana/adminer": "^4.8.0",
     "vrana/jush": "~2.0.2",
     "zendframework/zend-paginator": "^2.7",
     "zendframework/zend-servicemanager": "^3.2",
     "scheb/two-factor-bundle": "^3.26",
     "phpoffice/phpspreadsheet": "^1.9",
     "html2text/html2text": "^4.2.1",
-    "webmozarts/console-parallelization": "^1.1.0"
+    "webmozarts/console-parallelization": "^1.1.0",
+    "knplabs/knp-paginator-bundle": "^4.1.1"
   },
   "conflict": {
+    "doctrine/dbal": "^2.13.0",
     "monolog/monolog": ">=2",
     "phpstan/phpstan": "0.12.55",
     "symfony/symfony": "3.4.43 || 4.4.11",

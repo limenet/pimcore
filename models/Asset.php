@@ -22,6 +22,7 @@ use Pimcore\Event\AssetEvents;
 use Pimcore\Event\FrontendEvents;
 use Pimcore\Event\Model\AssetEvent;
 use Pimcore\File;
+use Pimcore\Helper\TemporaryFileHelperTrait;
 use Pimcore\Loader\ImplementationLoader\Exception\UnsupportedException;
 use Pimcore\Logger;
 use Pimcore\Model\Asset\Listing;
@@ -31,6 +32,7 @@ use Pimcore\Model\Element\ElementInterface;
 use Pimcore\Tool;
 use Pimcore\Tool\Mime;
 use Symfony\Component\EventDispatcher\GenericEvent;
+use Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesser;
 
 /**
  * @method \Pimcore\Model\Asset\Dao getDao()
@@ -40,6 +42,8 @@ use Symfony\Component\EventDispatcher\GenericEvent;
  */
 class Asset extends Element\AbstractElement
 {
+    use TemporaryFileHelperTrait;
+
     /**
      * possible types of an asset
      *
@@ -200,11 +204,6 @@ class Asset extends Element\AbstractElement
     protected $versionCount;
 
     /**
-     * @var string[]
-     */
-    protected $_temporaryFiles = [];
-
-    /**
      *
      * @return array
      */
@@ -326,19 +325,19 @@ class Asset extends Element\AbstractElement
                 $tmpFile = PIMCORE_SYSTEM_TEMP_DIRECTORY . '/asset-create-tmp-file-' . uniqid() . '.' . File::getFileExtension($data['filename']);
                 if (array_key_exists('data', $data)) {
                     File::put($tmpFile, $data['data']);
-                    $mimeType = Mime::detect($tmpFile);
+                    $mimeType = MimeTypeGuesser::getInstance()->guess($tmpFile);
                     unlink($tmpFile);
                 } else {
                     $streamMeta = stream_get_meta_data($data['stream']);
                     if (file_exists($streamMeta['uri'])) {
                         // stream is a local file, so we don't have to write a tmp file
-                        $mimeType = Mime::detect($streamMeta['uri']);
+                        $mimeType = MimeTypeGuesser::getInstance()->guess($streamMeta['uri']);
                     } else {
                         // write a tmp file because the stream isn't a pointer to the local filesystem
                         $isRewindable = @rewind($data['stream']);
                         $dest = fopen($tmpFile, 'w+', false, File::getContext());
                         stream_copy_to_stream($data['stream'], $dest);
-                        $mimeType = Mime::detect($tmpFile);
+                        $mimeType = MimeTypeGuesser::getInstance()->guess($tmpFile);
 
                         if (!$isRewindable) {
                             $data['stream'] = $dest;
@@ -349,9 +348,9 @@ class Asset extends Element\AbstractElement
                     }
                 }
             } else {
-                $mimeType = Mime::detect($data['sourcePath'], $data['filename']);
+                $mimeType = MimeTypeGuesser::getInstance()->guess($data['sourcePath']);
                 if (is_file($data['sourcePath'])) {
-                    $data['stream'] = fopen($data['sourcePath'], 'r', false, File::getContext());
+                    $data['stream'] = fopen($data['sourcePath'], 'rb', false, File::getContext());
                 }
 
                 unset($data['sourcePath']);
@@ -367,6 +366,7 @@ class Asset extends Element\AbstractElement
         /** @var Asset $asset */
         $asset = self::getModelFactory()->build($class);
         $asset->setParentId($parentId);
+        self::checkCreateData($data);
         $asset->setValues($data);
 
         if ($save) {
@@ -458,6 +458,7 @@ class Asset extends Element\AbstractElement
     }
 
     /**
+     * @deprecated will be removed in Pimcore 10
      * Get full path to the asset on the filesystem
      *
      * @return string
@@ -708,7 +709,7 @@ class Asset extends Element\AbstractElement
                         unlink($destinationPath);
                     }
 
-                    $dest = fopen($destinationPath, 'w', false, File::getContext());
+                    $dest = fopen($destinationPath, 'wb', false, File::getContext());
                     if ($dest) {
                         stream_copy_to_stream($src, $dest);
                         if (!fclose($dest)) {
@@ -724,12 +725,12 @@ class Asset extends Element\AbstractElement
                 @chmod($destinationPath, File::getDefaultMode());
 
                 // check file exists
-                if (!is_file($destinationPath)) {
+                if (!file_exists($destinationPath)) {
                     throw new \Exception("couldn't create new asset, file " . $destinationPath . " doesn't exist");
                 }
 
                 // set mime type
-                $mimetype = Mime::detect($destinationPath, $this->getFilename());
+                $mimetype = MimeTypeGuesser::getInstance()->guess($destinationPath);
                 $this->setMimetype($mimetype);
 
                 // set type
@@ -1313,17 +1314,14 @@ class Asset extends Element\AbstractElement
         if ($this->stream) {
             if (get_resource_type($this->stream) !== 'stream') {
                 $this->stream = null;
-            } else {
-                $streamMeta = stream_get_meta_data($this->stream);
-                if (!@rewind($this->stream) && $streamMeta['stream_type'] === 'STDIO') {
-                    $this->stream = null;
-                }
+            } elseif (!@rewind($this->stream)) {
+                $this->stream = null;
             }
         }
 
-        if (!$this->stream && $this->getType() != 'folder') {
+        if (!$this->stream && $this->getType() !== 'folder') {
             if (file_exists($this->getFileSystemPath())) {
-                $this->stream = fopen($this->getFileSystemPath(), 'r', false, File::getContext());
+                $this->stream = fopen($this->getFileSystemPath(), 'rb', false, File::getContext());
             } else {
                 $this->stream = tmpfile();
             }
@@ -1351,12 +1349,9 @@ class Asset extends Element\AbstractElement
             $isRewindable = @rewind($this->stream);
 
             if (!$isRewindable) {
-                $tmpFile = PIMCORE_SYSTEM_TEMP_DIRECTORY . '/asset-create-tmp-file-' . uniqid() . '.' . File::getFileExtension($this->getFilename());
-                $dest = fopen($tmpFile, 'w+', false, File::getContext());
-                stream_copy_to_stream($this->stream, $dest);
+                $tempFile = $this->getLocalFile($this->stream);
+                $dest = fopen($tempFile, 'w+', false, File::getContext());
                 $this->stream = $dest;
-
-                $this->_temporaryFiles[] = $tmpFile;
             }
         } elseif (is_null($stream)) {
             $this->stream = null;
@@ -1374,6 +1369,8 @@ class Asset extends Element\AbstractElement
     }
 
     /**
+     * @deprecated will be removed in Pimcore 10
+     *
      * @param string $type
      *
      * @return null|string
@@ -1550,19 +1547,8 @@ class Asset extends Element\AbstractElement
      */
     public function getTemporaryFile()
     {
-        $destinationPath = PIMCORE_SYSTEM_TEMP_DIRECTORY . '/asset-temporary/asset_' . $this->getId() . '_' . md5(microtime()) . '__' . $this->getFilename();
-        if (!is_dir(dirname($destinationPath))) {
-            File::mkdir(dirname($destinationPath));
-        }
-
-        $src = $this->getStream();
-        $dest = fopen($destinationPath, 'w+', false, File::getContext());
-        stream_copy_to_stream($src, $dest);
-        fclose($dest);
-
+        $destinationPath = self::getTemporaryFileFromStream($this->getStream());
         @chmod($destinationPath, File::getDefaultMode());
-
-        $this->_temporaryFiles[] = $destinationPath;
 
         return $destinationPath;
     }
@@ -1933,6 +1919,8 @@ class Asset extends Element\AbstractElement
     }
 
     /**
+     * @deprecated will be removed in Pimcore 10
+     *
      * @return string
      */
     public function getImageThumbnailSavePath()
@@ -1944,6 +1932,8 @@ class Asset extends Element\AbstractElement
     }
 
     /**
+     * @deprecated will be removed in Pimcore 10
+     *
      * @return string
      */
     public function getVideoThumbnailSavePath()
@@ -1957,7 +1947,7 @@ class Asset extends Element\AbstractElement
     public function __sleep()
     {
         $parentVars = parent::__sleep();
-        $blockedVars = ['_temporaryFiles', 'scheduledTasks', 'hasChildren', 'versions', 'parent', 'stream'];
+        $blockedVars = ['scheduledTasks', 'hasChildren', 'versions', 'parent', 'stream'];
 
         if ($this->isInDumpState()) {
             // this is if we want to make a full dump of the asset (eg. for a new version), including children for recyclebin
@@ -2022,13 +2012,6 @@ class Asset extends Element\AbstractElement
     {
         // close open streams
         $this->closeStream();
-
-        // delete temporary files
-        foreach ($this->_temporaryFiles as $tempFile) {
-            if (file_exists($tempFile)) {
-                @unlink($tempFile);
-            }
-        }
     }
 
     /**

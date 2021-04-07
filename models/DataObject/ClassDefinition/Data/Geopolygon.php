@@ -19,9 +19,10 @@ namespace Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model;
 use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Geo\AbstractGeo;
+use Pimcore\Normalizer\NormalizerInterface;
 use Pimcore\Tool\Serialize;
 
-class Geopolygon extends AbstractGeo implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, EqualComparisonInterface
+class Geopolygon extends AbstractGeo implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, EqualComparisonInterface, VarExporterInterface, NormalizerInterface
 {
     use Extension\ColumnType;
     use Extension\QueryColumnType;
@@ -138,7 +139,7 @@ class Geopolygon extends AbstractGeo implements ResourcePersistenceAwareInterfac
         if (is_array($data)) {
             $points = [];
             foreach ($data as $point) {
-                $points[] = new DataObject\Data\Geopoint($point['longitude'], $point['latitude']);
+                $points[] = new DataObject\Data\GeoCoordinates($point['latitude'], $point['longitude']);
             }
 
             return $points;
@@ -190,6 +191,8 @@ class Geopolygon extends AbstractGeo implements ResourcePersistenceAwareInterfac
     }
 
     /**
+     * @deprecated
+     *
      * @param string $importValue
      * @param null|DataObject\Concrete $object
      * @param mixed $params
@@ -203,7 +206,7 @@ class Geopolygon extends AbstractGeo implements ResourcePersistenceAwareInterfac
         if (is_array($rows)) {
             foreach ($rows as $row) {
                 $coords = explode(';', $row);
-                $points[] = new  DataObject\Data\Geopoint($coords[1], $coords[0]);
+                $points[] = new  DataObject\Data\GeoCoordinates($coords[0], $coords[1]);
             }
         }
 
@@ -262,7 +265,7 @@ class Geopolygon extends AbstractGeo implements ResourcePersistenceAwareInterfac
             foreach ($value as $point) {
                 $point = (array) $point;
                 if ($point['longitude'] != null and $point['latitude'] != null) {
-                    $points[] = new DataObject\Data\Geopoint($point['longitude'], $point['latitude']);
+                    $points[] = new DataObject\Data\GeoCoordinates($point['latitude'], $point['longitude']);
                 } else {
                     throw new \Exception('cannot get values from web service import - invalid data');
                 }
@@ -308,6 +311,9 @@ class Geopolygon extends AbstractGeo implements ResourcePersistenceAwareInterfac
     }
 
     /** Encode value for packing it into a single column.
+     *
+     * @deprecated marshal is deprecated and will be removed in Pimcore 10. Use normalize instead.
+     *
      * @param mixed $value
      * @param DataObject\Concrete $object
      * @param mixed $params
@@ -336,11 +342,14 @@ class Geopolygon extends AbstractGeo implements ResourcePersistenceAwareInterfac
     }
 
     /** See marshal
+     *
+     * @deprecated unmarshal is deprecated and will be removed in Pimcore 10. Use denormalize instead.
+     *
      * @param mixed $value
      * @param DataObject\Concrete $object
      * @param mixed $params
      *
-     * @return string|null
+     * @return mixed|null
      */
     public function unmarshal($value, $object = null, $params = [])
     {
@@ -349,10 +358,9 @@ class Geopolygon extends AbstractGeo implements ResourcePersistenceAwareInterfac
             $result = [];
             if (is_array($value)) {
                 foreach ($value as $point) {
-                    $result[] = new DataObject\Data\Geopoint($point[1], $point[0]);
+                    $result[] = new DataObject\Data\GeoCoordinates($point[0], $point[1]);
                 }
             }
-            $result = Serialize::serialize($result);
 
             return $result;
         }
@@ -390,5 +398,40 @@ class Geopolygon extends AbstractGeo implements ResourcePersistenceAwareInterfac
         }
 
         return true;
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function normalize($value, $params = [])
+    {
+        if (is_array($value)) {
+            $points = [];
+            $fd = new Geopoint();
+            foreach ($value as $p) {
+                $points[] = $fd->normalize($p);
+            }
+
+            return $points;
+        }
+
+        return null;
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function denormalize($value, $params = [])
+    {
+        if (is_array($value)) {
+            $result = [];
+            foreach ($value as $point) {
+                $result[] = new DataObject\Data\GeoCoordinates($point['latitude'], $point['longitude']);
+            }
+
+            return $result;
+        }
+
+        return null;
     }
 }

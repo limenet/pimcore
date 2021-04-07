@@ -19,7 +19,7 @@ namespace Pimcore\DataObject\Import\Resolver;
 
 use const FILTER_VALIDATE_BOOLEAN;
 use Pimcore\Model\Asset;
-use Pimcore\Model\DataObject\AbstractObject;
+use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition;
 use Pimcore\Model\DataObject\ClassDefinition\Helper\ImportClassResolver;
 use Pimcore\Model\DataObject\Concrete;
@@ -30,6 +30,9 @@ use Pimcore\Model\Element\ElementInterface;
 use Pimcore\Model\Element\Service;
 use Pimcore\Model\FactoryInterface;
 
+/**
+ * @deprecated since v6.9 and will be removed in Pimcore 10.
+ */
 class GetBy extends AbstractResolver
 {
     /**
@@ -78,7 +81,7 @@ class GetBy extends AbstractResolver
         /** @var Listing $list */
         $list = $this->modelFactory->build($listClassName);
 
-        $list->setObjectTypes([AbstractObject::OBJECT_TYPE_OBJECT, AbstractObject::OBJECT_TYPE_FOLDER, AbstractObject::OBJECT_TYPE_VARIANT]);
+        $list->setObjectTypes([DataObject::OBJECT_TYPE_OBJECT, DataObject::OBJECT_TYPE_FOLDER, DataObject::OBJECT_TYPE_VARIANT]);
         $list->setCondition($attribute . ' = ' . $list->quote($cellData));
         $list->setLimit(1);
         $list = $list->load();

@@ -19,8 +19,14 @@ namespace Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model;
 use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition\Data\Geo\AbstractGeo;
+use Pimcore\Normalizer\NormalizerInterface;
 
-class Geobounds extends AbstractGeo implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, EqualComparisonInterface
+class Geobounds extends AbstractGeo implements
+    ResourcePersistenceAwareInterface,
+    QueryResourcePersistenceAwareInterface,
+    EqualComparisonInterface,
+    VarExporterInterface,
+    NormalizerInterface
 {
     use Extension\ColumnType;
     use Extension\QueryColumnType;
@@ -103,8 +109,8 @@ class Geobounds extends AbstractGeo implements ResourcePersistenceAwareInterface
     public function getDataFromResource($data, $object = null, $params = [])
     {
         if ($data[$this->getName() . '__NElongitude'] && $data[$this->getName() . '__NElatitude'] && $data[$this->getName() . '__SWlongitude'] && $data[$this->getName() . '__SWlatitude']) {
-            $ne = new DataObject\Data\Geopoint($data[$this->getName() . '__NElongitude'], $data[$this->getName() . '__NElatitude']);
-            $sw = new DataObject\Data\Geopoint($data[$this->getName() . '__SWlongitude'], $data[$this->getName() . '__SWlatitude']);
+            $ne = new DataObject\Data\GeoCoordinates($data[$this->getName() . '__NElatitude'], $data[$this->getName() . '__NElongitude']);
+            $sw = new DataObject\Data\GeoCoordinates($data[$this->getName() . '__SWlatitude'], $data[$this->getName() . '__SWlongitude']);
 
             $geobounds = new DataObject\Data\Geobounds($ne, $sw);
 
@@ -179,8 +185,8 @@ class Geobounds extends AbstractGeo implements ResourcePersistenceAwareInterface
     public function getDataFromEditmode($data, $object = null, $params = [])
     {
         if ($data['NElongitude'] !== null && $data['NElatitude'] !== null && $data['SWlongitude'] !== null && $data['SWlatitude'] !== null) {
-            $ne = new DataObject\Data\Geopoint($data['NElongitude'], $data['NElatitude']);
-            $sw = new DataObject\Data\Geopoint($data['SWlongitude'], $data['SWlatitude']);
+            $ne = new DataObject\Data\GeoCoordinates($data['NElatitude'], $data['NElongitude']);
+            $sw = new DataObject\Data\GeoCoordinates($data['SWlatitude'], $data['SWlongitude']);
 
             return new DataObject\Data\Geobounds($ne, $sw);
         }
@@ -227,6 +233,8 @@ class Geobounds extends AbstractGeo implements ResourcePersistenceAwareInterface
     }
 
     /**
+     * @deprecated
+     *
      * @param string $importValue
      * @param null|DataObject\Concrete $object
      * @param mixed $params
@@ -241,7 +249,7 @@ class Geobounds extends AbstractGeo implements ResourcePersistenceAwareInterface
             $northEast = explode(',', $points[0]);
             $southWest = explode(',', $points[1]);
             if ($northEast[0] && $northEast[1] && $southWest[0] && $southWest[1]) {
-                $value = new DataObject\Data\Geobounds(new DataObject\Data\Geopoint($northEast[0], $northEast[1]), new DataObject\Data\Geopoint($southWest[0], $southWest[1]));
+                $value = new DataObject\Data\Geobounds(new DataObject\Data\GeoCoordinates($northEast[1], $northEast[0]), new DataObject\Data\GeoCoordinates($southWest[1], $southWest[0]));
             }
         }
 
@@ -303,8 +311,8 @@ class Geobounds extends AbstractGeo implements ResourcePersistenceAwareInterface
         } else {
             $value = (array) $value;
             if ($value['NElongitude'] !== null && $value['NElatitude'] !== null && $value['SWlongitude'] !== null && $value['SWlatitude'] !== null) {
-                $ne = new DataObject\Data\Geopoint($value['NElongitude'], $value['NElatitude']);
-                $sw = new DataObject\Data\Geopoint($value['SWlongitude'], $value['SWlatitude']);
+                $ne = new DataObject\Data\GeoCoordinates($value['NElatitude'], $value['NElongitude']);
+                $sw = new DataObject\Data\GeoCoordinates($value['SWlatitude'], $value['SWlongitude']);
 
                 return new DataObject\Data\Geobounds($ne, $sw);
             } else {
@@ -325,6 +333,9 @@ class Geobounds extends AbstractGeo implements ResourcePersistenceAwareInterface
     }
 
     /** Encode value for packing it into a single column.
+     *
+     * @deprecated marshal is deprecated and will be removed in Pimcore 10. Use normalize instead.
+     *
      * @param mixed $value
      * @param DataObject\Concrete $object
      * @param mixed $params
@@ -333,15 +344,61 @@ class Geobounds extends AbstractGeo implements ResourcePersistenceAwareInterface
      */
     public function marshal($value, $object = null, $params = [])
     {
-        if ($value) {
+        if ($value instanceof DataObject\Data\Geobounds) {
+            return [
+                'value' => json_encode([$value->getNorthEast()->getLatitude(), $value->getNorthEast()->getLongitude()]),
+                'value2' => json_encode([$value->getSouthWest()->getLatitude(), $value->getSouthWest()->getLongitude()]),
+            ];
+        } elseif (is_array($value)) {
             return [
                 'value' => json_encode([$value[$this->getName() . '__NElatitude'], $value[$this->getName() . '__NElongitude']]),
                 'value2' => json_encode([$value[$this->getName() . '__SWlatitude'], $value[$this->getName() . '__SWlongitude']]),
             ];
         }
+
+        return $value;
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function normalize($value, $params = [])
+    {
+        if ($value instanceof DataObject\Data\Geobounds) {
+            return [
+                'northEast' => ['latitude' => $value->getNorthEast()->getLatitude(), 'longitude' => $value->getNorthEast()->getLongitude()],
+                'southWest' => ['latitude' => $value->getSouthWest()->getLatitude(), 'longitude' => $value->getSouthWest()->getLongitude()],
+            ];
+        } elseif (is_array($value)) {
+            //TODO kick this as soon as classification store is implemented
+            return [
+                'northEast' => ['latitude' => $value[$this->getName() . '__NElatitude'], 'longitude' => $value[$this->getName() . '__NElongitude']],
+                'southWest' => ['latitude' => $value[$this->getName() . '__SWlatitude'], 'longitude' => $value[$this->getName() . '__SWlongitude']],
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function denormalize($value, $params = [])
+    {
+        if (is_array($value)) {
+            $ne = new DataObject\Data\GeoCoordinates($value['northEast']['latitude'], $value['northEast']['longitude']);
+            $sw = new DataObject\Data\GeoCoordinates($value['southWest']['latitude'], $value['southWest']['longitude']);
+
+            return new DataObject\Data\Geobounds($ne, $sw);
+        }
+
+        return null;
     }
 
     /** See marshal
+     *
+     * @deprecated unmarshal is deprecated and will be removed in Pimcore 10. Use denormalize instead.
+     *
      * @param mixed $value
      * @param DataObject\Concrete $object
      * @param mixed $params
@@ -354,14 +411,13 @@ class Geobounds extends AbstractGeo implements ResourcePersistenceAwareInterface
             $dataNE = json_decode($value['value']);
             $dataSW = json_decode($value['value2']);
 
-            $result = [];
-            $result[$this->getName() . '__NElatitude'] = $dataNE[0];
-            $result[$this->getName() . '__NElongitude'] = $dataNE[1];
-            $result[$this->getName() . '__SWlatitude'] = $dataSW[0];
-            $result[$this->getName() . '__SWlongitude'] = $dataSW[1];
+            $ne = new DataObject\Data\Geopoint($dataNE[1], $dataNE[0]);
+            $sw = new DataObject\Data\Geopoint($dataSW[1], $dataSW[0]);
 
-            return $result;
+            return new DataObject\Data\Geobounds($ne, $sw);
         }
+
+        return $value;
     }
 
     /**

@@ -18,9 +18,10 @@ namespace Pimcore\Model\DataObject\ClassDefinition\Data;
 
 use Pimcore\Model;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
+use Pimcore\Normalizer\NormalizerInterface;
 use Pimcore\Tool\Serialize;
 
-class RgbaColor extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface
+class RgbaColor extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface, VarExporterInterface, NormalizerInterface
 {
     use Extension\ColumnType;
     use Extension\QueryColumnType;
@@ -313,6 +314,9 @@ class RgbaColor extends Data implements ResourcePersistenceAwareInterface, Query
     }
 
     /** Encode value for packing it into a single column.
+     *
+     * @deprecated marshal is deprecated and will be removed in Pimcore 10. Use normalize instead.
+     *
      * @param mixed $value
      * @param Model\DataObject\Concrete $object
      * @param mixed $params
@@ -340,6 +344,9 @@ class RgbaColor extends Data implements ResourcePersistenceAwareInterface, Query
     }
 
     /** See marshal
+     *
+     * @deprecated unmarshal is deprecated and will be removed in Pimcore 10. Use denormalize instead.
+     *
      * @param mixed $value
      * @param Model\DataObject\Concrete $object
      * @param mixed $params
@@ -354,6 +361,41 @@ class RgbaColor extends Data implements ResourcePersistenceAwareInterface, Query
             list($r, $g, $b) = sscanf($rgb, '%02x%02x%02x');
             $a = hexdec($a);
             $color = new Model\DataObject\Data\RgbaColor($r, $g, $b, $a);
+
+            return $color;
+        }
+
+        return null;
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function normalize($value, $params = [])
+    {
+        if ($value instanceof Model\DataObject\Data\RgbaColor) {
+            return [
+                'r' => $value->getR(),
+                'g' => $value->getG(),
+                'b' => $value->getB(),
+                'a' => $value->getA(),
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function denormalize($value, $params = [])
+    {
+        if (is_array($value)) {
+            $color = new Model\DataObject\Data\RgbaColor();
+            $color->setR($value['r']);
+            $color->setG($value['g']);
+            $color->setB($value['b']);
+            $color->setA($value['a']);
 
             return $color;
         }
@@ -379,6 +421,8 @@ class RgbaColor extends Data implements ResourcePersistenceAwareInterface, Query
     }
 
     /**
+     * @deprecated
+     *
      * @param string $importValue
      * @param null|Model\DataObject\Concrete $object
      * @param mixed $params

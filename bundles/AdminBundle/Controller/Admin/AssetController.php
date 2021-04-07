@@ -27,6 +27,7 @@ use Pimcore\Event\Admin\ElementAdminStyleEvent;
 use Pimcore\Event\AdminEvents;
 use Pimcore\Event\AssetEvents;
 use Pimcore\File;
+use Pimcore\Helper\TemporaryFileHelperTrait;
 use Pimcore\Loader\ImplementationLoader\Exception\UnsupportedException;
 use Pimcore\Logger;
 use Pimcore\Model;
@@ -36,6 +37,7 @@ use Pimcore\Tool;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\EventDispatcher\GenericEvent;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\File\MimeType\MimeTypeGuesser;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -43,6 +45,7 @@ use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\Session\Attribute\AttributeBagInterface;
 use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
 use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
+use Symfony\Component\Process\Process;
 use Symfony\Component\Routing\Annotation\Route;
 
 /**
@@ -53,6 +56,7 @@ class AssetController extends ElementControllerBase implements EventedController
     use AdminStyleTrait;
     use ElementEditLockHelperTrait;
     use ApplySchedulerDataTrait;
+    use TemporaryFileHelperTrait;
 
     /**
      * @var Asset\Service
@@ -545,7 +549,7 @@ class AssetController extends ElementControllerBase implements EventedController
         $asset = Asset::getById($request->get('id'));
 
         $newFilename = Element\Service::getValidKey($_FILES['Filedata']['name'], 'asset');
-        $mimetype = Tool\Mime::detect($_FILES['Filedata']['tmp_name'], $newFilename);
+        $mimetype = MimeTypeGuesser::getInstance()->guess($_FILES['Filedata']['tmp_name']);
         $newType = Asset::getTypeFromMimeMapping($mimetype, $newFilename);
 
         if ($newType != $asset->getType()) {
@@ -1207,11 +1211,12 @@ class AssetController extends ElementControllerBase implements EventedController
             }
 
             $thumbnail = $image->getThumbnail($thumbnailConfig);
-            $thumbnailFile = $thumbnail->getFileSystemPath();
+            $thumbnailFile = $this->getLocalFile($thumbnail->getFileSystemPath());
 
             $exiftool = \Pimcore\Tool\Console::getExecutable('exiftool');
             if ($thumbnailConfig->getFormat() == 'JPEG' && $exiftool && isset($config['dpi']) && $config['dpi']) {
-                \Pimcore\Tool\Console::exec($exiftool . ' -overwrite_original -xresolution=' . escapeshellarg((int)$config['dpi']) . ' -yresolution=' . escapeshellarg((int)$config['dpi']) . ' -resolutionunit=inches ' . escapeshellarg($thumbnailFile));
+                $process = new Process([$exiftool, '-overwrite_original', '-xresolution=' . (int)$config['dpi'], '-yresolution=' . (int)$config['dpi'], '-resolutionunit=inches', $thumbnailFile]);
+                $process->run();
             }
         }
         if ($thumbnail) {
@@ -2040,7 +2045,7 @@ class AssetController extends ElementControllerBase implements EventedController
                     if ($a->isAllowed('view')) {
                         if (!$a instanceof Asset\Folder) {
                             // add the file with the relative path to the parent directory
-                            if(stream_is_local($a->getFileSystemPath())) {
+                            if (stream_is_local($a->getFileSystemPath())) {
                                 $zip->addFile($a->getFileSystemPath(), preg_replace('@^' . preg_quote($asset->getRealPath(), '@') . '@i', '', $a->getRealFullPath()));
                             } else {
                                 $zip->addFromString(preg_replace('@^' . preg_quote($asset->getRealPath(), '@') . '@i', '', $a->getRealFullPath()), file_get_contents($a->getFileSystemPath()));

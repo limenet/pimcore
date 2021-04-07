@@ -22,6 +22,7 @@ class AbstractInstaller implements InstallerInterface
 {
     /**
      * @deprecated
+     *
      * @var OutputWriterInterface
      */
     protected $outputWriter;
@@ -38,11 +39,17 @@ class AbstractInstaller implements InstallerInterface
         $this->setOutputWriter($outputWriter);
     }
 
+    /**
+     * @deprecated Will be removed in Pimcore 10
+     */
     public function setOutputWriter(OutputWriterInterface $outputWriter)
     {
         $this->outputWriter = $outputWriter;
     }
 
+    /**
+     * @deprecated Will be removed in Pimcore 10
+     */
     public function getOutputWriter(): OutputWriterInterface
     {
         return $this->outputWriter;
@@ -113,7 +120,7 @@ class AbstractInstaller implements InstallerInterface
 
     public function getOutput(): OutputInterface
     {
-        if($this->getOutputWriter() instanceof OutputWriter) {
+        if ($this->getOutputWriter() instanceof OutputWriter) {
             return $this->getOutputWriter()->getOutputInstance();
         }
 

@@ -20,8 +20,9 @@ use Pimcore\DataObject\Consent\Service;
 use Pimcore\Model;
 use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
+use Pimcore\Normalizer\NormalizerInterface;
 
-class Consent extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface
+class Consent extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface, VarExporterInterface, NormalizerInterface
 {
     use Extension\ColumnType;
     use Extension\QueryColumnType;
@@ -324,6 +325,7 @@ class Consent extends Data implements ResourcePersistenceAwareInterface, QueryRe
     /**
      * fills object field data values from CSV Import String
      *
+     * @deprecated
      * @abstract
      *
      * @param string $importValue
@@ -476,5 +478,32 @@ class Consent extends Data implements ResourcePersistenceAwareInterface, QueryRe
         $newValue = $newValue instanceof DataObject\Data\Consent ? $newValue->getConsent() : null;
 
         return $oldValue === $newValue;
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function normalize($value, $params = [])
+    {
+        if ($value instanceof DataObject\Data\Consent) {
+            return [
+                'consent' => $value->getConsent(),
+                'noteId' => $value->getNoteId(),
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function denormalize($value, $params = [])
+    {
+        if (is_array($value)) {
+            return new DataObject\Data\Consent($value['consent'], $value['noteId']);
+        }
+
+        return null;
     }
 }

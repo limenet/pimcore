@@ -19,12 +19,14 @@ namespace Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model;
 use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
+use Pimcore\Normalizer\NormalizerInterface;
 
-class Select extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface
+class Select extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface, VarExporterInterface, NormalizerInterface
 {
     use Model\DataObject\Traits\SimpleComparisonTrait;
     use Extension\ColumnType;
     use Extension\QueryColumnType;
+    use DataObject\Traits\SimpleNormalizerTrait;
 
     use DataObject\Traits\DefaultValueTrait;
     use DataObject\ClassDefinition\NullablePhpdocReturnTypeTrait;
@@ -311,8 +313,8 @@ class Select extends Data implements ResourcePersistenceAwareInterface, QueryRes
 
         $value = '';
         foreach ($this->options as $option) {
-            if ($option->value == $data) {
-                $value = $option->key;
+            if ($option['value'] == $data) {
+                $value = $option['key'];
                 break;
             }
         }
@@ -495,7 +497,7 @@ class Select extends Data implements ResourcePersistenceAwareInterface, QueryRes
             if ($params['purpose'] == 'editmode') {
                 $result = $data;
             } else {
-                $result = ['value' => $data ? $data : null, 'options' => $this->getOptions()];
+                $result = ['value' => $data ?? null, 'options' => $this->getOptions()];
             }
 
             return $result;

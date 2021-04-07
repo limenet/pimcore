@@ -247,13 +247,21 @@ pimcore.object.tree = Class.create({
                     tree.loadMask.hide();
                     pimcore.helpers.showNotification(t("error"), t("cant_move_node_to_target"),
                         "error",t(rdata.message));
-                    pimcore.elementservice.refreshNode(oldParent);
+                    // we have to delay refresh between two nodes,
+                    // as there could be parent child relationship leading to race condition
+                    window.setTimeout(function () {
+                        pimcore.elementservice.refreshNode(oldParent);
+                    }, 500);
                     pimcore.elementservice.refreshNode(newParent);
                 }
             } catch(e){
                 tree.loadMask.hide();
                 pimcore.helpers.showNotification(t("error"), t("cant_move_node_to_target"), "error");
-                pimcore.elementservice.refreshNode(oldParent);
+                // we have to delay refresh between two nodes,
+                // as there could be parent child relationship leading to race condition
+                window.setTimeout(function () {
+                    pimcore.elementservice.refreshNode(oldParent);
+                }, 500);
                 pimcore.elementservice.refreshNode(newParent);
             }
             tree.loadMask.hide();
@@ -344,7 +352,10 @@ pimcore.object.tree = Class.create({
             var tmpMenuEntryImport;
             var $this = this;
 
-            object_types.sort([{property: 'translatedText', direction: 'ASC'}]);
+            object_types.sort([
+                {property: 'translatedGroup', direction: 'ASC'},
+                {property: 'translatedText', direction: 'ASC'}
+            ]);
 
             object_types.each(function (classRecord) {
 
@@ -380,7 +391,7 @@ pimcore.object.tree = Class.create({
                 if (classRecord.get("group")) {
                     if (!groups["objects"][classRecord.get("group")]) {
                         groups["objects"][classRecord.get("group")] = {
-                            text: classRecord.get("group"),
+                            text: classRecord.get("translatedGroup"),
                             iconCls: "pimcore_icon_folder",
                             hideOnClick: false,
                             menu: {
@@ -388,7 +399,7 @@ pimcore.object.tree = Class.create({
                             }
                         };
                         groups["importer"][classRecord.get("group")] = {
-                            text: classRecord.get("group"),
+                            text: classRecord.get("translatedGroup"),
                             iconCls: "pimcore_icon_folder",
                             hideOnClick: false,
                             menu: {

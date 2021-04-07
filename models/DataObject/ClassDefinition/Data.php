@@ -195,6 +195,8 @@ abstract class Data
     }
 
     /**
+     * @deprecated
+     *
      * @param string $importValue
      * @param null|DataObject\Concrete $object
      * @param mixed $params
@@ -1609,6 +1611,9 @@ abstract class Data
     }
 
     /** Encode value for packing it into a single column.
+     *
+     * @deprecated marshal is deprecated and will be removed in Pimcore 10. Use normalize instead.
+     *
      * @param mixed $value
      * @param Model\DataObject\AbstractObject $object
      * @param mixed $params
@@ -1625,6 +1630,9 @@ abstract class Data
     }
 
     /** See marshal
+     *
+     * @deprecated unmarshal is deprecated and will be removed in Pimcore 10. Use denormalize instead.
+     *
      * @param mixed $data
      * @param Model\DataObject\AbstractObject $object
      * @param array $params

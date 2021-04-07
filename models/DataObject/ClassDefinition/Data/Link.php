@@ -22,14 +22,16 @@ use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model\Document;
 use Pimcore\Model\Element;
+use Pimcore\Normalizer\NormalizerInterface;
 use Pimcore\Tool\Serialize;
 
-class Link extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface
+class Link extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface, VarExporterInterface, NormalizerInterface
 {
     use DataObject\Traits\SimpleComparisonTrait;
     use Extension\ColumnType;
     use Extension\QueryColumnType;
     use DataObject\ClassDefinition\NullablePhpdocReturnTypeTrait;
+    use DataObject\Traits\ObjectVarTrait;
 
     /**
      * Static type of this element
@@ -218,9 +220,25 @@ class Link extends Data implements ResourcePersistenceAwareInterface, QueryResou
         return $data;
     }
 
-    /** @inheritDoc */
+    /**
+     * { @inheritdoc }
+     */
+    public function marshal($value, $object = null, $params = [])
+    {
+        return $this->normalize($value, $params);
+    }
+
+    /**
+     * { @inheritdoc }
+     */
     public function unmarshal($data, $object = null, $params = [])
     {
+        if (is_array($data)) {
+            $link = new DataObject\Data\Link();
+            $link->setValues($data);
+            $data = $link;
+        }
+
         if ($data instanceof DataObject\Data\Link) {
             $target = Element\Service::getElementById($data->getInternalType(), $data->getInternal());
             if (!$target) {
@@ -351,6 +369,8 @@ class Link extends Data implements ResourcePersistenceAwareInterface, QueryResou
 
     /**
      * fills object field data values from CSV Import String
+     *
+     * @deprecated
      *
      * @param string $importValue
      * @param null|DataObject\Concrete $object
@@ -585,5 +605,32 @@ class Link extends Data implements ResourcePersistenceAwareInterface, QueryResou
         }
 
         return $this->isEqualArray($oldValue, $newValue);
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function normalize($value, $params = [])
+    {
+        if ($value instanceof DataObject\Data\Link) {
+            return $value->getObjectVars();
+        }
+
+        return null;
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function denormalize($value, $params = [])
+    {
+        if (is_array($value)) {
+            $link = new DataObject\Data\Link();
+            $link->setValues($value);
+
+            return $link;
+        }
+
+        return null;
     }
 }

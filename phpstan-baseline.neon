@@ -258,6 +258,11 @@ parameters:
 			path: bundles/EcommerceFrameworkBundle/CartManager/Cart.php
 
 		-
+			message: "#^Call to an undefined method Pimcore\\\\Model\\\\Dao\\\\AbstractDao\\:\\:getById\\(\\)\\.$#"
+			count: 1
+			path: bundles/EcommerceFrameworkBundle/CartManager/Cart.php
+
+		-
 			message: "#^Call to an undefined method Pimcore\\\\Bundle\\\\EcommerceFrameworkBundle\\\\CartManager\\\\CartItemInterface\\:\\:setSortIndex\\(\\)\\.$#"
 			count: 1
 			path: bundles/EcommerceFrameworkBundle/CartManager/Cart.php
@@ -1851,3 +1856,23 @@ parameters:
 			message: "#^Method Pimcore\\\\Templating\\\\Model\\\\ViewModel\\:\\:getIterator\\(\\) should return ArrayIterator but returns Traversable\\<string, mixed\\>\\.$#"
 			count: 1
 			path: lib/Templating/Model/ViewModel.php
+
+		-
+			message: "#^PHPDoc tag @param references unknown parameter\\: \\$data$#"
+			count: 1
+			path: models/Document/PageSnippet.php
+
+		-
+			message: "#^PHPDoc tag @param references unknown parameter\\: \\$name$#"
+			count: 1
+			path: models/Document/PageSnippet.php
+
+		-
+			message: "#^PHPDoc tag @param references unknown parameter\\: \\$data$#"
+			count: 1
+			path: models/Document/TargetingDocument.php
+
+		-
+			message: "#^PHPDoc tag @param references unknown parameter\\: \\$name$#"
+			count: 1
+			path: models/Document/TargetingDocument.php

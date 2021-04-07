@@ -19,11 +19,13 @@ namespace Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model;
 use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
+use Pimcore\Normalizer\NormalizerInterface;
 
-class Checkbox extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface
+class Checkbox extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface, VarExporterInterface, NormalizerInterface
 {
     use DataObject\Traits\DefaultValueTrait;
     use DataObject\ClassDefinition\NullablePhpdocReturnTypeTrait;
+    use DataObject\Traits\SimpleNormalizerTrait;
 
     use Extension\ColumnType;
     use Extension\QueryColumnType;
@@ -214,6 +216,8 @@ class Checkbox extends Data implements ResourcePersistenceAwareInterface, QueryR
      * fills object field data values from CSV Import String
      *
      * @abstract
+     *
+     * @deprecated
      *
      * @param string $importValue
      * @param null|DataObject\Concrete $object

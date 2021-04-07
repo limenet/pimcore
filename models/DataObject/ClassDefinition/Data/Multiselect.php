@@ -19,13 +19,16 @@ namespace Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model;
 use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
+use Pimcore\Normalizer\NormalizerInterface;
 
-class Multiselect extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface
+class Multiselect extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface, VarExporterInterface, NormalizerInterface
 {
     use DataObject\Traits\SimpleComparisonTrait;
     use Extension\ColumnType;
     use Extension\QueryColumnType;
     use DataObject\ClassDefinition\NullablePhpdocReturnTypeTrait;
+
+    use DataObject\Traits\SimpleNormalizerTrait;
 
     /**
      * Static type of this element
@@ -353,6 +356,8 @@ class Multiselect extends Data implements ResourcePersistenceAwareInterface, Que
     }
 
     /**
+     * @deprecated
+     *
      * @param string $importValue
      * @param null|DataObject\Concrete $object
      * @param mixed $params
@@ -452,7 +457,7 @@ class Multiselect extends Data implements ResourcePersistenceAwareInterface, Que
             $html = '<ul>';
 
             foreach ($this->options as $option) {
-                if ($map[$option['value']]) {
+                if ($map[$option['value']] ?? false) {
                     $value = $option['key'];
                     $html .= '<li>' . $value . '</li>';
                 }

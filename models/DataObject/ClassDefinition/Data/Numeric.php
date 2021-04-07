@@ -18,11 +18,13 @@ namespace Pimcore\Model\DataObject\ClassDefinition\Data;
 
 use Pimcore\Model;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
+use Pimcore\Normalizer\NormalizerInterface;
 
-class Numeric extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface
+class Numeric extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface, VarExporterInterface, NormalizerInterface
 {
     use Model\DataObject\Traits\DefaultValueTrait;
     use Model\DataObject\ClassDefinition\NullablePhpdocReturnTypeTrait;
+    use Model\DataObject\Traits\SimpleNormalizerTrait;
 
     use Model\DataObject\Traits\SimpleComparisonTrait;
     use Extension\ColumnType {
@@ -532,6 +534,8 @@ class Numeric extends Data implements ResourcePersistenceAwareInterface, QueryRe
 
     /**
      * fills object field data values from CSV Import String
+     *
+     * @deprecated
      *
      * @param string $importValue
      * @param null|Model\DataObject\Concrete $object

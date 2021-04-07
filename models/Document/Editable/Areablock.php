@@ -439,7 +439,7 @@ class Areablock extends Model\Document\Editable implements BlockInterface
 
         if ($dialogConfig) {
             $editableRenderer = \Pimcore::getContainer()->get(EditableRenderer::class);
-            $this->outputEditmode('<template id="dialogBoxConfig-' . $dialogConfig->getId() . '">' . \json_encode($dialogConfig) . '</template>');
+            $this->outputEditmode('<template id="dialogBoxConfig-' . $dialogConfig->getId() . '">' . \htmlspecialchars(\json_encode($dialogConfig)) . '</template>');
             $this->renderDialogBoxEditables($dialogConfig->getItems(), $editableRenderer, $dialogConfig->getId());
         }
     }
@@ -463,7 +463,7 @@ class Areablock extends Model\Document\Editable implements BlockInterface
             }
 
             $editable->setInDialogBox($dialogId);
-            $editable->setOption('dialogBoxConfig', $config);
+            $editable->addConfig('dialogBoxConfig', $config);
             $this->outputEditmode($editable->admin());
         } elseif (is_array($config) && isset($config[0])) {
             foreach ($config as $item) {

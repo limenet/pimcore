@@ -19,8 +19,7 @@ namespace Pimcore\Model\DataObject;
 
 use Pimcore\Db\ZendCompatibility\Expression;
 use Pimcore\Model;
-use Zend\Paginator\Adapter\AdapterInterface;
-use Zend\Paginator\AdapterAggregateInterface;
+use Pimcore\Model\Paginator\PaginateListingInterface;
 
 /**
  * @method Model\DataObject[] load()
@@ -30,8 +29,9 @@ use Zend\Paginator\AdapterAggregateInterface;
  * @method int[] loadIdList()
  * @method \Pimcore\Model\DataObject\Listing\Dao getDao()
  * @method onCreateQuery(callable $callback)
+ * @method onCreateQueryBuilder(?callable $callback)
  */
-class Listing extends Model\Listing\AbstractListing implements AdapterInterface, AdapterAggregateInterface
+class Listing extends Model\Listing\AbstractListing implements PaginateListingInterface
 {
     /**
      * @var array|null
@@ -48,7 +48,7 @@ class Listing extends Model\Listing\AbstractListing implements AdapterInterface,
     /**
      * @var array
      */
-    public $objectTypes = [AbstractObject::OBJECT_TYPE_OBJECT, AbstractObject::OBJECT_TYPE_FOLDER];
+    public $objectTypes = [Model\DataObject::OBJECT_TYPE_OBJECT, Model\DataObject::OBJECT_TYPE_FOLDER];
 
     public function __construct()
     {
@@ -197,6 +197,8 @@ class Listing extends Model\Listing\AbstractListing implements AdapterInterface,
     }
 
     /**
+     * @deprecated will be removed in Pimcore 10
+     *
      * @return self
      */
     public function getPaginatorAdapter()

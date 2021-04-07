@@ -23,8 +23,9 @@ use Pimcore\Logger;
 use Pimcore\Model;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model\DataObject\QuantityValue\UnitConversionService;
+use Pimcore\Normalizer\NormalizerInterface;
 
-class QuantityValue extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface
+class QuantityValue extends Data implements ResourcePersistenceAwareInterface, QueryResourcePersistenceAwareInterface, TypeDeclarationSupportInterface, EqualComparisonInterface, VarExporterInterface, NormalizerInterface
 {
     use Extension\ColumnType;
     use Extension\QueryColumnType;
@@ -82,7 +83,7 @@ class QuantityValue extends Data implements ResourcePersistenceAwareInterface, Q
      */
     public $queryColumnType = [
         'value' => 'double',
-        'unit' => 'bigint(20)',
+        'unit' => 'varchar(50)',
     ];
 
     /**
@@ -92,7 +93,7 @@ class QuantityValue extends Data implements ResourcePersistenceAwareInterface, Q
      */
     public $columnType = [
         'value' => 'double',
-        'unit' => 'bigint(20)',
+        'unit' => 'varchar(50)',
     ];
 
     /**
@@ -330,7 +331,7 @@ class QuantityValue extends Data implements ResourcePersistenceAwareInterface, Q
     public function getDataFromEditmode($data, $object = null, $params = [])
     {
         if (strlen($data['value']) > 0 || $data['unit']) {
-            if (is_numeric($data['unit'])) {
+            if ($data['unit']) {
                 if ($data['unit'] == -1 || $data['unit'] == null || empty($data['unit'])) {
                     return new Model\DataObject\Data\QuantityValue($data['value'], null);
                 }
@@ -392,12 +393,6 @@ class QuantityValue extends Data implements ResourcePersistenceAwareInterface, Q
             if ((!empty($value) && !is_numeric($data->getValue()))) {
                 throw new Model\Element\ValidationException('Invalid dimension unit data ' . $this->getName());
             }
-
-            if (!empty($data->getUnitId())) {
-                if (!is_numeric($data->getUnitId())) {
-                    throw new Model\Element\ValidationException('Unit id has to be empty or numeric ' . $data->getUnitId());
-                }
-            }
         }
     }
 
@@ -427,6 +422,8 @@ class QuantityValue extends Data implements ResourcePersistenceAwareInterface, Q
 
     /**
      * fills object field data values from CSV Import String
+     *
+     * @deprecated
      *
      * @param string $importValue
      * @param null|Model\DataObject\Concrete $object
@@ -555,6 +552,9 @@ class QuantityValue extends Data implements ResourcePersistenceAwareInterface, Q
     }
 
     /** Encode value for packing it into a single column.
+     *
+     * @deprecated marshal is deprecated and will be removed in Pimcore 10. Use normalize instead.
+     *
      * @param mixed $value
      * @param Model\DataObject\Concrete $object
      * @param mixed $params
@@ -590,6 +590,9 @@ class QuantityValue extends Data implements ResourcePersistenceAwareInterface, Q
     }
 
     /** See marshal
+     *
+     * @deprecated unmarshal is deprecated and will be removed in Pimcore 10. Use denormalize instead.
+     *
      * @param mixed $value
      * @param Model\DataObject\Concrete $object
      * @param mixed $params
@@ -682,6 +685,7 @@ class QuantityValue extends Data implements ResourcePersistenceAwareInterface, Q
     public static function __set_state($data)
     {
         $obj = parent::__set_state($data);
+
         $obj->configureOptions();
 
         return $obj;
@@ -765,5 +769,30 @@ class QuantityValue extends Data implements ResourcePersistenceAwareInterface, Q
         }
 
         return $unitId;
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function normalize($value, $params = [])
+    {
+        if ($value instanceof Model\DataObject\Data\QuantityValue) {
+            return [
+                'value' => $value->getValue(),
+                'unitId' => $value->getUnitId(),
+            ];
+        }
+    }
+
+    /**
+     * { @inheritdoc }
+     */
+    public function denormalize($value, $params = [])
+    {
+        if (is_array($value)) {
+            return new Model\DataObject\Data\QuantityValue($value['value'], $value['unitId']);
+        }
+
+        return null;
     }
 }

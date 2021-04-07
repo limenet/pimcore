@@ -19,7 +19,6 @@ namespace Pimcore\DataObject\Import\Resolver;
 
 use const FILTER_VALIDATE_BOOLEAN;
 use Pimcore\Model\DataObject;
-use Pimcore\Model\DataObject\AbstractObject;
 use Pimcore\Model\DataObject\ClassDefinition;
 use Pimcore\Model\DataObject\ClassDefinition\Helper\ImportClassResolver;
 use Pimcore\Model\DataObject\Concrete;
@@ -29,6 +28,9 @@ use Pimcore\Model\Element\ElementInterface;
 use Pimcore\Model\Element\Service;
 use Pimcore\Model\FactoryInterface;
 
+/**
+ * @deprecated since v6.9 and will be removed in Pimcore 10.
+ */
 class Filename extends AbstractResolver
 {
     /**
@@ -48,7 +50,7 @@ class Filename extends AbstractResolver
         $prefix = (string)$config->resolverSettings->prefix;
         $service = ImportClassResolver::resolveClassOrService($config->resolverSettings->phpClassOrService);
 
-        $parent = AbstractObject::getById($parentId);
+        $parent = DataObject::getById($parentId);
         if (!$parent) {
             throw new ImportErrorException('parent not found');
         }
@@ -68,7 +70,7 @@ class Filename extends AbstractResolver
         $intendedPath = $parent->getRealFullPath() . '/' . $objectKey;
 
         if (!$overwrite) {
-            if (AbstractObject::getByPath($intendedPath)) {
+            if (DataObject::getByPath($intendedPath)) {
                 $objectKey = $prefix;
             } else {
                 $object = $this->modelFactory->build($className);

@@ -17,15 +17,17 @@
 namespace Pimcore\Model\DataObject\ClassDefinition\Data;
 
 use Pimcore\Db;
+use Pimcore\Element\MarshallerService;
 use Pimcore\Logger;
 use Pimcore\Model;
 use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model\DataObject\ClassDefinition\Layout;
 use Pimcore\Model\Element;
+use Pimcore\Normalizer\NormalizerInterface;
 use Pimcore\Tool\Serialize;
 
-class Block extends Data implements CustomResourcePersistingInterface, ResourcePersistenceAwareInterface, LazyLoadingSupportInterface, TypeDeclarationSupportInterface
+class Block extends Data implements CustomResourcePersistingInterface, ResourcePersistenceAwareInterface, LazyLoadingSupportInterface, TypeDeclarationSupportInterface, VarExporterInterface, NormalizerInterface
 {
     use Element\ChildsCompatibilityTrait;
     use Extension\ColumnType;
@@ -157,14 +159,33 @@ class Block extends Data implements CustomResourcePersistingInterface, ResourceP
                             $elementData = $fd->filterMultipleAssignments($elementData, $object, $params);
                         }
                     }
-                    $dataForResource = $fd->marshal($elementData, $object, ['raw' => true, 'blockmode' => true]);
-                    //                    $blockElement->setData($fd->unmarshal($dataForResource, $object, ["raw" => true]));
+                    // $encodedDataBC = $fd->marshal($elementData, $object, ['raw' => true, 'blockmode' => true]);
+
+                    if ($fd instanceof NormalizerInterface) {
+                        $normalizedData = $fd->normalize($elementData, [
+                            'object' => $object,
+                            'fieldDefinition' => $fd,
+                        ]);
+                        $encodedData = $normalizedData;
+
+                        /** @var MarshallerService $marshallerService */
+                        $marshallerService = \Pimcore::getContainer()->get(MarshallerService::class);
+
+                        if ($marshallerService->supportsFielddefinition('block', $fd->getFieldtype())) {
+                            $marshaller = $marshallerService->buildFieldefinitionMarshaller('block', $fd->getFieldtype());
+                            // TODO format only passed in for BC reasons (localizedfields). remove it as soon as marshal is gone
+                            $encodedData = $marshaller->marshal($normalizedData, ['object' => $object, 'fieldDefinition' => $fd, 'format' => 'block']);
+                        }
+                    } else {
+                        // BC layer
+                        $encodedData = $fd->marshal($elementData, $object, ['raw' => true, 'blockmode' => true]);
+                    }
 
                     // do not serialize the block element itself
                     $resultElement[$elementName] = [
                         'name' => $blockElement->getName(),
                         'type' => $blockElement->getType(),
-                        'data' => $dataForResource,
+                        'data' => $encodedData,
                     ];
                 }
                 $result[] = $resultElement;
@@ -203,10 +224,28 @@ class Block extends Data implements CustomResourcePersistingInterface, ResourceP
                     }
 
                     // do not serialize the block element itself
-                    //                    $elementData = $blockElement->getData();
+
                     $elementData = $blockElementRaw['data'];
 
-                    $dataFromResource = $fd->unmarshal($elementData, $object, ['raw' => true, 'blockmode' => true]);
+                    if ($fd instanceof NormalizerInterface) {
+                        /** @var MarshallerService $marshallerService */
+                        $marshallerService = \Pimcore::getContainer()->get(MarshallerService::class);
+
+                        if ($marshallerService->supportsFielddefinition('block', $fd->getFieldtype())) {
+                            $unmarshaller = $marshallerService->buildFieldefinitionMarshaller('block', $fd->getFieldtype());
+                            // TODO format only passed in for BC reasons (localizedfields). remove it as soon as marshal is gone
+                            $elementData = $unmarshaller->unmarshal($elementData, ['object' => $object, 'fieldDefinition' => $fd, 'format' => 'block']);
+                        }
+
+                        $dataFromResource = $fd->denormalize($elementData, [
+                            'object' => $object,
+                            'fieldDefinition' => $fd,
+                        ]);
+                    } else {
+                        // BC layer
+                        $dataFromResource = $fd->unmarshal($elementData, $object, ['raw' => true, 'blockmode' => true]);
+                    }
+
                     $blockElementRaw['data'] = $dataFromResource;
 
                     $blockElement = new DataObject\Data\BlockElement($blockElementRaw['name'], $blockElementRaw['type'], $blockElementRaw['data']);
@@ -451,6 +490,8 @@ class Block extends Data implements CustomResourcePersistingInterface, ResourceP
     }
 
     /**
+     * @deprecated
+     *
      * @param string $importValue
      * @param null|DataObject\Concrete $object
      * @param mixed $params
@@ -793,8 +834,15 @@ class Block extends Data implements CustomResourcePersistingInterface, ResourceP
     public function __sleep()
     {
         $vars = get_object_vars($this);
-        unset($vars['fieldDefinitionsCache']);
-        unset($vars['referencedFields']);
+        $blockedVars = [
+            'fieldDefinitionsCache',
+            'referencedFields',
+            'blockedVarsForExport',
+        ];
+
+        foreach ($blockedVars as $blockedVar) {
+            unset($vars[$blockedVar]);
+        }
 
         return array_keys($vars);
     }
@@ -1241,5 +1289,73 @@ class Block extends Data implements CustomResourcePersistingInterface, ResourceP
             }
             $blockElement->setOwner($params['owner'], $params['fieldname'], $params['language'] ?? null);
         }
+    }
+
+    /** { @inheritdoc } */
+    public function normalize($value, $params = [])
+    {
+        $result = null;
+        if ($value) {
+            $result = [];
+            $fieldDefinitions = $this->getFieldDefinitions();
+            foreach ($value as $block) {
+                $resultItem = [];
+                /**
+                 * @var  string $key
+                 * @var  DataObject\Data\BlockElement $fieldValue
+                 */
+                foreach ($block as $key => $fieldValue) {
+                    $fd = $fieldDefinitions[$key];
+
+                    if ($fd instanceof NormalizerInterface) {
+                        $normalizedData = $fd->normalize($fieldValue->getData(), [
+                            'object' => $params['object'] ?? null,
+                            'fieldDefinition' => $fd,
+                        ]);
+                        $resultItem[$key] = $normalizedData;
+                    } else {
+                        throw new \Exception('data type ' . $fd->getFieldtype() . ' does not implement normalizer interface');
+                    }
+                }
+                $result[] = $resultItem;
+            }
+        }
+
+        return $result;
+    }
+
+    /** { @inheritdoc } */
+    public function denormalize($value, $params = [])
+    {
+        if (is_array($value)) {
+            $result = [];
+            $fieldDefinitions = $this->getFieldDefinitions();
+
+            foreach ($value as $idx => $blockItem) {
+                $resultItem = [];
+                /**
+                 * @var  string $key
+                 * @var  DataObject\Data\BlockElement $fieldValue
+                 */
+                foreach ($blockItem as $key => $fieldValue) {
+                    $fd = $fieldDefinitions[$key];
+
+                    if ($fd instanceof NormalizerInterface) {
+                        $denormalizedData = $fd->denormalize($fieldValue, [
+                            'object' => $params['object'],
+                            'fieldDefinition' => $fd,
+                        ]);
+                        $resultItem[$key] = $denormalizedData;
+                    } else {
+                        throw new \Exception('data type does not implement normalizer interface');
+                    }
+                }
+                $result[] = $resultItem;
+            }
+
+            return $result;
+        }
+
+        return null;
     }
 }

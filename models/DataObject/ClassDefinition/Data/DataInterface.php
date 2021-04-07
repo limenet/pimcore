@@ -19,6 +19,9 @@ namespace Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model\DataObject\AbstractObject;
 use Pimcore\Model\DataObject\Concrete;
 
+/**
+ * @deprecated not in use anymore, will be removed in Pimcore 10
+ */
 interface DataInterface
 {
     /**
@@ -34,6 +37,8 @@ interface DataInterface
     public function getForCsvExport($object, $params = []);
 
     /**
+     * @deprecated
+     *
      * @param string $importValue
      * @param null|Concrete $object
      * @param array $params

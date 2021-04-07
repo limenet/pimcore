@@ -22,9 +22,10 @@ use Pimcore\Model\DataObject;
 use Pimcore\Model\DataObject\ClassDefinition\Data;
 use Pimcore\Model\DataObject\Objectbrick;
 use Pimcore\Model\Webservice;
+use Pimcore\Normalizer\NormalizerInterface;
 use Pimcore\Tool;
 
-class Objectbricks extends Data implements CustomResourcePersistingInterface, TypeDeclarationSupportInterface
+class Objectbricks extends Data implements CustomResourcePersistingInterface, TypeDeclarationSupportInterface, NormalizerInterface
 {
     /**
      * Static type of this element
@@ -228,7 +229,7 @@ class Objectbricks extends Data implements CustomResourcePersistingInterface, Ty
             && !$fielddefinition instanceof Block) {
 
             //lazy loading data is fetched from DB differently, so that not every relation object is instantiated
-            if ($fielddefinition instanceof ReverseManyToManyObjectRelation) {
+            if ($fielddefinition instanceof ReverseObjectRelation) {
                 $refKey = $fielddefinition->getOwnerFieldName();
                 $refId = $fielddefinition->getOwnerClassId();
             } else {
@@ -236,7 +237,7 @@ class Objectbricks extends Data implements CustomResourcePersistingInterface, Ty
                 $refId = null;
             }
 
-            $relations = $item->getRelationData($refKey, !$fielddefinition instanceof ReverseManyToManyObjectRelation, $refId);
+            $relations = $item->getRelationData($refKey, !$fielddefinition instanceof ReverseObjectRelation, $refId);
             if (empty($relations) && !empty($parent)) {
                 $parentItem = $parent->{'get' . ucfirst($this->getName())}();
                 if (!empty($parentItem)) {
@@ -267,10 +268,10 @@ class Objectbricks extends Data implements CustomResourcePersistingInterface, Ty
                 $editmodeValue = $fielddefinition->getDataForEditmode($fieldValue, $baseObject, $params);
             }
             if ($fielddefinition->isEmpty($fieldValue) && !empty($parent)) {
-                $backup = DataObject\AbstractObject::getGetInheritedValues();
-                DataObject\AbstractObject::setGetInheritedValues(true);
+                $backup = DataObject::getGetInheritedValues();
+                DataObject::setGetInheritedValues(true);
                 $parentItem = $parent->{'get' . ucfirst($this->getName())}()->$getter();
-                DataObject\AbstractObject::setGetInheritedValues($backup);
+                DataObject::setGetInheritedValues($backup);
                 if (!empty($parentItem)) {
                     return $this->getDataForField($parentItem, $key, $fielddefinition, $level + 1, $parent, $getter, $params);
                 }
@@ -374,6 +375,8 @@ class Objectbricks extends Data implements CustomResourcePersistingInterface, Ty
     }
 
     /**
+     * @deprecated
+     *
      * @param string $importValue
      * @param null|DataObject\Concrete $object
      * @param array $params
@@ -1080,5 +1083,61 @@ class Objectbricks extends Data implements CustomResourcePersistingInterface, Ty
                 }
             }
         }
+    }
+
+    public function normalize($value, $params = [])
+    {
+        if ($value instanceof Objectbrick) {
+            $result = [];
+            $value = $value->getObjectVars();
+            /** @var Objectbrick\Data\AbstractData $item */
+            foreach ($value as $item) {
+                if (!$item instanceof DataObject\Objectbrick\Data\AbstractData) {
+                    continue;
+                }
+
+                $type = $item->getType();
+                $result[$type] = [];
+                $brickDef = Objectbrick\Definition::getByKey($type);
+                $fds = $brickDef->getFieldDefinitions();
+                foreach ($fds as $fd) {
+                    $value = $item->{'get' . $fd->getName()}();
+                    if ($fd instanceof NormalizerInterface) {
+                        $result[$type][$fd->getName()] = $fd->normalize($value, $params);
+                    } else {
+                        throw new \Exception($fd->getName() . ' does not implement NormalizerInterface');
+                    }
+                }
+            }
+
+            return $result;
+        }
+
+        return null;
+    }
+
+    public function denormalize($value, $params = [])
+    {
+        if (is_array($value)) {
+            $result = [];
+            foreach ($value as $key => $v) {
+                $brickDef = Objectbrick\Definition::getByKey($key);
+                $fds = $brickDef->getFieldDefinitions();
+
+                $result[$key] = [];
+
+                foreach ($v as $fieldKey => $fieldValue) {
+                    $fd = $fds[$fieldKey];
+                    if ($fd instanceof NormalizerInterface) {
+                        $fieldValue = $fd->denormalize($fieldValue, $params);
+                    }
+                    $result[$key][$fieldKey] = $fieldValue;
+                }
+            }
+
+            return $result;
+        }
+
+        return null;
     }
 }

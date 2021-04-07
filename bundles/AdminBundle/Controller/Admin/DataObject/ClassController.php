@@ -157,6 +157,10 @@ class ClassController extends AdminController implements EventedControllerInterf
         }
 
         $treeNodes = [];
+        if (!empty($groups)) {
+            $types = array_column($groups, 'type');
+            array_multisort($types, SORT_ASC, array_keys($groups), SORT_ASC, $groups);
+        }
 
         if (!$request->get('grouped')) {
             // list output
@@ -817,7 +821,7 @@ class ClassController extends AdminController implements EventedControllerInterf
         if ($request->query->has('allowedTypes')) {
             $allowedTypes = explode(',', $request->get('allowedTypes'));
         }
-        $object = DataObject\AbstractObject::getById($request->get('object_id'));
+        $object = DataObject::getById($request->get('object_id'));
 
         $currentLayoutId = $request->get('layoutId', null);
         $user = \Pimcore\Tool\Admin::getCurrentUser();
@@ -931,7 +935,7 @@ class ClassController extends AdminController implements EventedControllerInterf
                         'outerFieldname' => $request->get('field_name'),
                     ];
 
-                    $object = DataObject\AbstractObject::getById($request->get('object_id'));
+                    $object = DataObject::getById($request->get('object_id'));
 
                     DataObject\Service::enrichLayoutDefinition($layoutDefinitions, $object, $context);
 
@@ -1197,7 +1201,7 @@ class ClassController extends AdminController implements EventedControllerInterf
         $fieldname = null;
         $className = null;
 
-        $object = DataObject\AbstractObject::getById($request->get('object_id'));
+        $object = DataObject::getById($request->get('object_id'));
 
         if ($request->query->has('class_id') && $request->query->has('field_name')) {
             $classId = $request->get('class_id');
@@ -1349,7 +1353,7 @@ class ClassController extends AdminController implements EventedControllerInterf
                     'outerFieldname' => $request->get('field_name'),
                 ];
 
-                $object = DataObject\AbstractObject::getById($request->get('object_id'));
+                $object = DataObject::getById($request->get('object_id'));
 
                 DataObject\Service::enrichLayoutDefinition($layout, $object, $context);
                 $type->setLayoutDefinitions($layout);

@@ -248,6 +248,7 @@ CREATE TABLE `documents_printpage` (
   PRIMARY KEY (`id`)
 ) DEFAULT CHARSET=utf8mb4;
 
+CREATE OR REPLACE VIEW documents_editables AS SELECT * FROM documents_elements;
 
 DROP TABLE IF EXISTS `edit_lock`;
 CREATE TABLE `edit_lock` (
@@ -577,6 +578,16 @@ CREATE TABLE `tmp_store` (
   KEY `expiryDate` (`expiryDate`)
 ) DEFAULT CHARSET=utf8mb4;
 
+DROP TABLE IF EXISTS `settings_store`;
+CREATE TABLE `settings_store` (
+  `id` varchar(190) NOT NULL DEFAULT '',
+  `scope` varchar(190) NOT NULL DEFAULT '',
+  `data` longtext,
+  `type` enum('bool','int','float','string') NOT NULL DEFAULT 'string',
+  PRIMARY KEY (`id`, `scope`),
+  KEY `scope` (`scope`)
+) DEFAULT CHARSET=utf8mb4;
+
 DROP TABLE IF EXISTS `tracking_events`;
 CREATE TABLE `tracking_events` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -632,6 +643,8 @@ CREATE TABLE `translations_messages` (
   PRIMARY KEY (`key`,`language`),
   KEY `language` (`language`)
 ) DEFAULT CHARSET=utf8mb4;
+
+CREATE OR REPLACE VIEW translations_website AS SELECT * FROM translations_messages;
 
 DROP TABLE IF EXISTS `tree_locks`;
 CREATE TABLE `tree_locks` (

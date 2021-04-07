@@ -1176,7 +1176,6 @@ abstract class AbstractElasticSearch implements ProductListInterface
 
             // process result from elasticsearch
             $this->processResult($result);
-
         } else {
             $this->preparedGroupByValuesResults = [];
         }
@@ -1404,6 +1403,8 @@ abstract class AbstractElasticSearch implements ProductListInterface
 
     /**
      * Return a fully configured Paginator Adapter from this method.
+     *
+     * @deprecated will be removed in Pimcore 10
      *
      * @return self
      */
